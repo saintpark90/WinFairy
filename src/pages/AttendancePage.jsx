@@ -9,6 +9,11 @@ function AttendancePage({ userId }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    if (!supabase) {
+      setIsError(true)
+      setMessage('Supabase 환경변수가 비어 있어 저장할 수 없습니다.')
+      return
+    }
     setLoading(true)
     setMessage('')
     setIsError(false)
