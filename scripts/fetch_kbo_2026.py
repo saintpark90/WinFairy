@@ -1,11 +1,24 @@
 import datetime as dt
 import json
 import os
+import time
 from typing import Any, Dict, List
 
 import requests
 
 HANWHA_KEYWORDS = ("한화", "Eagles", "Hanwha")
+TEAM_ID_TO_NAME = {
+  "HH": "한화",
+  "OB": "두산",
+  "LG": "LG",
+  "LT": "롯데",
+  "HT": "KIA",
+  "SS": "삼성",
+  "WO": "키움",
+  "SK": "SSG",
+  "KT": "KT",
+  "NC": "NC",
+}
 
 
 def require_env(name: str) -> str:
@@ -16,32 +29,36 @@ def require_env(name: str) -> str:
 
 
 def fetch_schedule(year: int) -> List[Dict[str, Any]]:
-  """
-  기본값은 KBO JSON 스케줄 API 형식으로 가정합니다.
-  운영 시 endpoint/query 파라미터를 실제 수집 규격에 맞게 수정하세요.
-  """
   endpoint = os.getenv(
     "KBO_SCHEDULE_ENDPOINT",
-    "https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList",
+    "https://www.koreabaseball.com/ws/Main.asmx/GetKboGameList",
   )
-  params = {
-    "leId": 1,
-    "srIdList": 0,
-    "season": year,
-    "month": 0,
-    "teamId": "HH",  # Hanwha
-  }
-  resp = requests.get(endpoint, params=params, timeout=30)
-  resp.raise_for_status()
+  start_date_text = os.getenv("KBO_START_DATE", f"{year}-03-01")
+  start_date = dt.date.fromisoformat(start_date_text)
+  end_date = min(dt.date.today(), dt.date(year, 12, 31))
+  if start_date > end_date:
+    return []
 
-  try:
-    payload = resp.json()
-  except json.JSONDecodeError as exc:
-    raise RuntimeError("Schedule API did not return JSON. Check endpoint.") from exc
+  rows: List[Dict[str, Any]] = []
+  current = start_date
+  while current <= end_date:
+    params = {
+      "leId": 1,
+      "srId": 0,
+      "date": current.strftime("%Y%m%d"),
+    }
+    resp = requests.get(endpoint, params=params, timeout=30)
+    resp.raise_for_status()
+    try:
+      payload = resp.json()
+    except json.JSONDecodeError as exc:
+      raise RuntimeError("Schedule API did not return JSON. Check endpoint.") from exc
+    games = payload.get("game") or payload.get("data") or []
+    if isinstance(games, list):
+      rows.extend(games)
+    current += dt.timedelta(days=1)
+    time.sleep(0.05)
 
-  rows = payload.get("rows") or payload.get("data") or payload
-  if not isinstance(rows, list):
-    raise RuntimeError("Unexpected schedule payload format.")
   return rows
 
 
@@ -54,8 +71,10 @@ def parse_int(value: Any) -> int | None:
 
 
 def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
-  home_name = (row.get("HOME_NM") or row.get("homeTeamName") or "").strip()
-  away_name = (row.get("AWAY_NM") or row.get("awayTeamName") or "").strip()
+  home_id = (row.get("HOME_ID") or "").strip()
+  away_id = (row.get("AWAY_ID") or "").strip()
+  home_name = TEAM_ID_TO_NAME.get(home_id, (row.get("HOME_NM") or "").strip())
+  away_name = TEAM_ID_TO_NAME.get(away_id, (row.get("AWAY_NM") or "").strip())
   if not any(k in home_name for k in HANWHA_KEYWORDS) and not any(
     k in away_name for k in HANWHA_KEYWORDS
   ):
@@ -71,8 +90,8 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
     game_date = raw_date[:10]
 
   is_home = any(k in home_name for k in HANWHA_KEYWORDS)
-  hanwha_score = parse_int(row.get("HOME_SCORE") if is_home else row.get("AWAY_SCORE"))
-  opp_score = parse_int(row.get("AWAY_SCORE") if is_home else row.get("HOME_SCORE"))
+  hanwha_score = parse_int(row.get("B_SCORE_CN") if is_home else row.get("T_SCORE_CN"))
+  opp_score = parse_int(row.get("T_SCORE_CN") if is_home else row.get("B_SCORE_CN"))
 
   winner = None
   if hanwha_score is not None and opp_score is not None:
@@ -90,7 +109,7 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
     "hanwha_score": hanwha_score,
     "opponent_score": opp_score,
     "winner_team": winner,
-    "game_status": row.get("GAME_STATE") or row.get("gameStatus"),
+    "game_status": row.get("GAME_SC_NM") or row.get("GAME_STATE") or row.get("gameStatus"),
     "source": "KBO",
     "player_stats": [],
   }
