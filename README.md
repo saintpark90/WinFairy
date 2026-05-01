@@ -41,6 +41,18 @@ python fetch_kbo_2026.py
 > 참고: KBO 응답 포맷은 시점별로 바뀔 수 있으니 `fetch_kbo_2026.py`의
 > `fetch_schedule`, `normalize_match` 필드 매핑은 실제 응답 기준으로 1회 점검하세요.
 
+## 3-1) 경기결과 자동 수집 (하루 1회)
+
+`Sync KBO Regular Season Results` GitHub Actions 워크플로우가 매일 1회 실행되어
+KBO 정규시즌 결과를 `matches` 테이블에 upsert 합니다.
+
+GitHub 저장소의 Actions secrets에 아래 키를 등록하세요.
+
+- `SUPABASE_URL`: `https://<project-ref>.supabase.co`
+- `SUPABASE_SERVICE_ROLE_KEY`: service role key
+
+워크플로우 수동 실행은 Actions 탭에서 `workflow_dispatch`로 가능합니다.
+
 ## 4) 로컬 실행
 
 ```bash
@@ -61,6 +73,7 @@ npm run dev
 - 카카오 OAuth 전용 로그인 (미로그인 시 자동 리디렉션)
 - 상단 메뉴: `홈`, `직관일 입력`
 - 직관일 입력: 날짜만 선택하면 `matches`와 연결해 저장
+- 직관일 입력: 날짜 입력 + 경기결과 달력 클릭 선택
 - 홈 통계:
   - 전체 승률
   - 경기장별 승률

@@ -45,6 +45,14 @@ def fetch_schedule(year: int) -> List[Dict[str, Any]]:
   return rows
 
 
+def parse_int(value: Any) -> int | None:
+  if isinstance(value, int):
+    return value
+  if isinstance(value, str) and value.strip().isdigit():
+    return int(value.strip())
+  return None
+
+
 def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
   home_name = (row.get("HOME_NM") or row.get("homeTeamName") or "").strip()
   away_name = (row.get("AWAY_NM") or row.get("awayTeamName") or "").strip()
@@ -63,11 +71,11 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
     game_date = raw_date[:10]
 
   is_home = any(k in home_name for k in HANWHA_KEYWORDS)
-  hanwha_score = row.get("HOME_SCORE") if is_home else row.get("AWAY_SCORE")
-  opp_score = row.get("AWAY_SCORE") if is_home else row.get("HOME_SCORE")
+  hanwha_score = parse_int(row.get("HOME_SCORE") if is_home else row.get("AWAY_SCORE"))
+  opp_score = parse_int(row.get("AWAY_SCORE") if is_home else row.get("HOME_SCORE"))
 
   winner = None
-  if isinstance(hanwha_score, int) and isinstance(opp_score, int):
+  if hanwha_score is not None and opp_score is not None:
     if hanwha_score > opp_score:
       winner = "한화 이글스"
     elif opp_score > hanwha_score:
@@ -79,8 +87,8 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
     "opponent_team": away_name if is_home else home_name,
     "stadium": row.get("S_NM") or row.get("stadium") or "미정",
     "home_away": "HOME" if is_home else "AWAY",
-    "hanwha_score": hanwha_score if isinstance(hanwha_score, int) else None,
-    "opponent_score": opp_score if isinstance(opp_score, int) else None,
+    "hanwha_score": hanwha_score,
+    "opponent_score": opp_score,
     "winner_team": winner,
     "game_status": row.get("GAME_STATE") or row.get("gameStatus"),
     "source": "KBO",
@@ -101,7 +109,7 @@ def upsert_matches(supabase_url: str, service_role_key: str, rows: List[Dict[str
 
 
 def main() -> None:
-  season = int(os.getenv("TARGET_SEASON", "2026"))
+  season = int(os.getenv("TARGET_SEASON", str(dt.date.today().year)))
   supabase_url = require_env("SUPABASE_URL")
   service_role_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
 
