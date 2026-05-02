@@ -45,17 +45,19 @@ const buildTopPlayers = (records, type) => {
             playerName: key,
             games: 0,
             avgTotal: 0,
+            battingAvgSamples: 0,
             eraTotal: 0,
-            hasEra: false,
+            eraSamples: 0,
           }
 
         current.games += 1
         if (typeof player.batting_avg === 'number') {
           current.avgTotal += player.batting_avg
+          current.battingAvgSamples += 1
         }
         if (typeof player.era === 'number') {
           current.eraTotal += player.era
-          current.hasEra = true
+          current.eraSamples += 1
         }
         stats.set(key, current)
       })
@@ -64,16 +66,34 @@ const buildTopPlayers = (records, type) => {
   return [...stats.values()]
     .map((player) => ({
       ...player,
-      battingAvg: Number((player.avgTotal / player.games).toFixed(3)),
-      era: player.hasEra
-        ? Number((player.eraTotal / player.games).toFixed(2))
-        : null,
+      battingAvg:
+        player.battingAvgSamples > 0
+          ? Number((player.avgTotal / player.battingAvgSamples).toFixed(3))
+          : null,
+      era:
+        player.eraSamples > 0
+          ? Number((player.eraTotal / player.eraSamples).toFixed(2))
+          : null,
     }))
     .sort((a, b) => {
       if (type === 'pitcher') {
-        return (a.era ?? Number.MAX_SAFE_INTEGER) - (b.era ?? Number.MAX_SAFE_INTEGER)
+        if (a.era != null && b.era != null) {
+          return a.era - b.era
+        }
+        if (a.era != null) return -1
+        if (b.era != null) return 1
+        return b.games - a.games
       }
-      return b.battingAvg - a.battingAvg
+      if (a.battingAvg != null && b.battingAvg != null) {
+        if (a.battingAvg !== b.battingAvg) {
+          return b.battingAvg - a.battingAvg
+        }
+      } else if (a.battingAvg != null) {
+        return -1
+      } else if (b.battingAvg != null) {
+        return 1
+      }
+      return b.games - a.games
     })
     .slice(0, 5)
 }

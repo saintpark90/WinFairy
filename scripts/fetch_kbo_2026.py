@@ -70,6 +70,50 @@ def parse_int(value: Any) -> int | None:
   return None
 
 
+def build_player_stats_from_kbo_row(
+  row: Dict[str, Any],
+  is_home: bool,
+  han_won: bool | None,
+) -> List[Dict[str, Any]]:
+  """
+  KBO GetKboGameList 경기 요약 필드만으로 한화 관련 선수 스냅샷을 만듭니다.
+  (전체 박스스코어 API가 불안정할 때도 일별 동기화로 집계 가능)
+  """
+  stats: List[Dict[str, Any]] = []
+  prefix = "B" if is_home else "T"
+
+  def append_player(position_type: str, name: str) -> None:
+    name = (name or "").strip()
+    if not name:
+      return
+    stats.append(
+      {
+        "player_name": name,
+        "team_name": "한화 이글스",
+        "position_type": position_type,
+      }
+    )
+
+  append_player("pitcher", row.get(f"{prefix}_PIT_P_NM"))
+  append_player("batter", row.get(f"{prefix}_P_NM"))
+
+  if han_won is True:
+    append_player("pitcher", row.get("W_PIT_P_NM"))
+    append_player("pitcher", row.get("SV_PIT_P_NM"))
+  elif han_won is False:
+    append_player("pitcher", row.get("L_PIT_P_NM"))
+
+  deduped: List[Dict[str, Any]] = []
+  seen: set[tuple[str, str]] = set()
+  for player in stats:
+    key = (player["player_name"], player["position_type"])
+    if key in seen:
+      continue
+    seen.add(key)
+    deduped.append(player)
+  return deduped
+
+
 def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
   home_id = (row.get("HOME_ID") or "").strip()
   away_id = (row.get("AWAY_ID") or "").strip()
@@ -94,11 +138,16 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
   opp_score = parse_int(row.get("T_SCORE_CN") if is_home else row.get("B_SCORE_CN"))
 
   winner = None
+  han_won: bool | None = None
   if hanwha_score is not None and opp_score is not None:
     if hanwha_score > opp_score:
       winner = "한화 이글스"
+      han_won = True
     elif opp_score > hanwha_score:
       winner = away_name if is_home else home_name
+      han_won = False
+
+  player_stats = build_player_stats_from_kbo_row(row, is_home, han_won)
 
   return {
     "game_date": game_date,
@@ -111,7 +160,7 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
     "winner_team": winner,
     "game_status": row.get("GAME_SC_NM") or row.get("GAME_STATE") or row.get("gameStatus"),
     "source": "KBO",
-    "player_stats": [],
+    "player_stats": player_stats,
   }
 
 

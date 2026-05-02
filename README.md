@@ -44,7 +44,9 @@ python fetch_kbo_2026.py
 ## 3-1) 경기결과 자동 수집 (하루 1회)
 
 `Sync KBO Regular Season Results` GitHub Actions 워크플로우가 매일 1회 실행되어
-KBO 정규시즌 결과를 `matches` 테이블에 upsert 합니다.
+KBO 정규시즌 결과를 `matches` 테이블에 upsert 합니다. 이때 `player_stats`에는
+KBO 일별 경기 요약(선발·승·패·세이브·주요 타자 등)을 한화 기준으로 채워 넣어,
+직관일 통계 화면의 TOP5 집계에 사용합니다.
 
 GitHub 저장소의 Actions secrets에 아래 키를 등록하세요.
 

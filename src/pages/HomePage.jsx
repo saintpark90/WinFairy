@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  supabase,
-  supabaseAnonKey,
-  supabaseConfigError,
-  supabaseUrl,
-} from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { buildDashboardStats } from '../lib/stats'
 
 const StatSection = ({ title, rows }) => (
@@ -39,21 +34,6 @@ function HomePage({ userId }) {
   const [attendanceRecords, setAttendanceRecords] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const maskedAnonKey = useMemo(() => {
-    if (!supabaseAnonKey) return '-'
-    if (supabaseAnonKey.length <= 12) return supabaseAnonKey
-    return `${supabaseAnonKey.slice(0, 8)}...${supabaseAnonKey.slice(-4)}`
-  }, [])
-  const dbConnectionInfo = useMemo(() => {
-    const projectRef = supabaseUrl?.split('://')[1]?.split('.')[0] ?? '-'
-    return [
-      { label: 'Supabase URL', value: supabaseUrl ?? '-' },
-      { label: 'Project Ref', value: projectRef },
-      { label: 'Anon Key', value: maskedAnonKey },
-      { label: 'Schema', value: 'public (matches, user_attendance)' },
-      { label: 'Config Status', value: supabaseConfigError || 'OK' },
-    ]
-  }, [maskedAnonKey])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,17 +70,6 @@ function HomePage({ userId }) {
 
   return (
     <div className="dashboard">
-      <section className="card">
-        <h3>DB 접속정보</h3>
-        <ul className="ranking">
-          {dbConnectionInfo.map((item) => (
-            <li key={item.label}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </li>
-          ))}
-        </ul>
-      </section>
       {loading ? (
         <p className="center-text">통계 데이터를 불러오는 중...</p>
       ) : null}
@@ -112,43 +81,66 @@ function HomePage({ userId }) {
       ) : null}
       {!loading && !error && attendanceRecords.length ? (
         <>
-      <section className="hero-card">
-        <h2>내 승률</h2>
-        <p className="big-number">{stats.summary.winRate}%</p>
-        <p>
-          {stats.summary.wins}승 {stats.summary.losses}패 / 총 {stats.summary.totalGames}경기
-        </p>
-      </section>
+          <section className="hero-card">
+            <h2>내 승률</h2>
+            <p className="big-number">{stats.summary.winRate}%</p>
+            <p>
+              {stats.summary.wins}승 {stats.summary.losses}패 / 총{' '}
+              {stats.summary.totalGames}경기
+            </p>
+          </section>
 
-      <StatSection title="경기장 별 승률" rows={stats.byStadium} />
-      <StatSection title="홈 / 원정 승률" rows={stats.byHomeAway} />
-      <StatSection title="평일 / 주말 승률" rows={stats.byWeekType} />
-      <StatSection title="상대팀 별 승률" rows={stats.byOpponent} />
+          <StatSection title="경기장 별 승률" rows={stats.byStadium} />
+          <StatSection title="홈 / 원정 승률" rows={stats.byHomeAway} />
+          <StatSection title="평일 / 주말 승률" rows={stats.byWeekType} />
+          <StatSection title="상대팀 별 승률" rows={stats.byOpponent} />
 
-      <section className="card grid2">
-        <div>
-          <h3>직관일 기준 타자 TOP5</h3>
-          <ul className="ranking">
-            {stats.topBatters.map((player) => (
-              <li key={player.playerName}>
-                <span>{player.playerName}</span>
-                <strong>타율 {player.battingAvg}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h3>직관일 기준 투수 TOP5</h3>
-          <ul className="ranking">
-            {stats.topPitchers.map((player) => (
-              <li key={player.playerName}>
-                <span>{player.playerName}</span>
-                <strong>ERA {player.era ?? '-'}</strong>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+          <section className="card grid2">
+            <div>
+              <h3>직관일 기준 타자 TOP5</h3>
+              <p className="top5-hint">
+                직관으로 기록한 경기의 KBO 경기 요약 선수 정보를 모아 집계합니다.
+              </p>
+              {stats.topBatters.length ? (
+                <ul className="ranking">
+                  {stats.topBatters.map((player) => (
+                    <li key={player.playerName}>
+                      <span>{player.playerName}</span>
+                      <strong>
+                        {player.battingAvg != null
+                          ? `타율 ${player.battingAvg}`
+                          : `직관 ${player.games}경기`}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">표시할 타자 기록이 없습니다.</p>
+              )}
+            </div>
+            <div>
+              <h3>직관일 기준 투수 TOP5</h3>
+              <p className="top5-hint">
+                선발·승·패·세이브 등 요약 기록이 있는 경기만 반영됩니다.
+              </p>
+              {stats.topPitchers.length ? (
+                <ul className="ranking">
+                  {stats.topPitchers.map((player) => (
+                    <li key={player.playerName}>
+                      <span>{player.playerName}</span>
+                      <strong>
+                        {player.era != null
+                          ? `ERA ${player.era}`
+                          : `직관 ${player.games}경기`}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">표시할 투수 기록이 없습니다.</p>
+              )}
+            </div>
+          </section>
         </>
       ) : null}
     </div>
