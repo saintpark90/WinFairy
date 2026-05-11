@@ -5,20 +5,30 @@ GitHub Pages + Supabase + Kakao OAuth 조합으로 동작합니다.
 
 ## 1) 환경 변수
 
-`.env.example`을 복사해 `.env` 생성:
+`.env.example`을 참고해 로컬 전용 파일을 만듭니다. **실제 키 값은 Git에 커밋하지 마세요.**
+
+- **로컬 개발**: 프로젝트 루트에 `.env.local`을 두면 Vite가 자동으로 읽습니다.  
+  `.gitignore`에 의해 **저장소에 포함되지 않으므로** 운영 배포와 무관합니다.
+- **GitHub Pages 빌드**: `Deploy to GitHub Pages` 워크플로우가 저장소 **Actions secrets**의  
+  `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`만 빌드 시 주입합니다. 로컬 `.env.local`은 사용되지 않습니다.
+
+예시(로컬):
 
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
+
+필요한 변수:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_BASE_PATH` (GitHub Pages 저장소 경로, 예: `/seungyo-eagles/`)
+- Python 스크립트용(선택): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
 
 ## 2) Supabase 설정
 
 1. Supabase 프로젝트 생성
-2. `supabase/schema.sql` 실행
+2. `supabase/schema.sql` 실행 (이미 운영 중인 DB에는 `supabase/membership_leaderboard.sql`만 추가 실행해도 됩니다)
 3. Authentication > Providers > Kakao 활성화
 4. Kakao Developers에서 앱 생성 후 REST API 키/Secret 등록
 5. Redirect URL 등록:
@@ -73,7 +83,8 @@ npm run dev
 ## 구현된 기능
 
 - 카카오 OAuth 전용 로그인 (미로그인 시 자동 리디렉션)
-- 상단 메뉴: `홈`, `직관일 입력`
+- 로그인 시 `profiles`에 회원 정보 동기화, 직관 승률 **순위** 화면
+- 상단 메뉴: `내 정보`, `순위`, `직관일 입력`
 - 직관일 입력: 날짜만 선택하면 `matches`와 연결해 저장
 - 직관일 입력: 날짜 입력 + 경기결과 달력 클릭 선택
 - 홈 통계:

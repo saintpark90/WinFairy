@@ -1,67 +1,5 @@
-create extension if not exists "pgcrypto";
-
-create table if not exists public.matches (
-  id uuid primary key default gen_random_uuid(),
-  game_date date not null unique,
-  season int not null,
-  opponent_team text not null,
-  stadium text not null,
-  home_away text not null check (home_away in ('HOME', 'AWAY')),
-  hanwha_score int,
-  opponent_score int,
-  winner_team text,
-  game_status text,
-  source text default 'KBO',
-  player_stats jsonb default '[]'::jsonb,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create table if not exists public.user_attendance (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  match_id uuid not null references public.matches(id) on delete cascade,
-  attended_at date not null,
-  created_at timestamptz not null default now(),
-  unique (user_id, match_id)
-);
-
-create index if not exists idx_matches_date on public.matches(game_date);
-create index if not exists idx_user_attendance_user on public.user_attendance(user_id);
-
-alter table public.matches enable row level security;
-alter table public.user_attendance enable row level security;
-
-drop policy if exists "public read matches" on public.matches;
-create policy "public read matches"
-  on public.matches
-  for select
-  using (true);
-
-drop policy if exists "user own attendance read" on public.user_attendance;
-create policy "user own attendance read"
-  on public.user_attendance
-  for select
-  using (auth.uid() = user_id);
-
-drop policy if exists "user own attendance insert" on public.user_attendance;
-create policy "user own attendance insert"
-  on public.user_attendance
-  for insert
-  with check (auth.uid() = user_id);
-
-drop policy if exists "user own attendance update" on public.user_attendance;
-create policy "user own attendance update"
-  on public.user_attendance
-  for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
-
-drop policy if exists "user own attendance delete" on public.user_attendance;
-create policy "user own attendance delete"
-  on public.user_attendance
-  for delete
-  using (auth.uid() = user_id);
+-- 기존 Supabase 프로젝트에 추가 적용 시: SQL Editor에서 이 파일 내용 실행
+-- (새 저장소라면 루트 schema.sql 단일 실행으로도 포함됩니다)
 
 -- 회원 프로필 (카카오 로그인 후 동기화)
 create table if not exists public.profiles (
@@ -100,7 +38,6 @@ create policy "profiles update own"
   using (auth.uid() = id)
   with check (auth.uid() = id);
 
--- 신규 가입 시 프로필 행 자동 생성 (클라이언트 upsert과 병행)
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -121,7 +58,6 @@ create trigger on_auth_user_created
   for each row
   execute procedure public.handle_new_user();
 
--- 직관 데이터 기준 회원 순위 (타인의 user_attendance 행 노출 없이 집계만 반환)
 create or replace function public.get_attendance_leaderboard()
 returns table (
   user_id uuid,
@@ -173,7 +109,7 @@ $$;
 revoke all on function public.get_attendance_leaderboard() from public;
 grant execute on function public.get_attendance_leaderboard() to authenticated;
 
--- 기존 직관만 있고 profiles가 없던 경우(선택): 아래 한 번 실행
+-- 기존 직관만 있고 profiles 행이 없던 사용자 (선택)
 -- insert into public.profiles (id)
 -- select distinct ua.user_id from public.user_attendance ua
 -- where not exists (select 1 from public.profiles p where p.id = ua.user_id)

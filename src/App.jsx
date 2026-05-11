@@ -2,16 +2,36 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { supabase, supabaseConfigError } from './lib/supabase'
+import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
 import HomePage from './pages/HomePage'
 import AttendancePage from './pages/AttendancePage'
+import RankingsPage from './pages/RankingsPage'
 
 function App() {
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [authError, setAuthError] = useState('')
+  const isLocalDevHost =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1'
+  const localSessionStorageKey = 'winfairy-local-session'
+  const useLocalMockAuth = isLocalDevHost && !supabase
 
   useEffect(() => {
     const initAuth = async () => {
+      if (useLocalMockAuth) {
+        const storedSession = window.localStorage.getItem(localSessionStorageKey)
+        if (storedSession) {
+          try {
+            setSession(JSON.parse(storedSession))
+          } catch {
+            window.localStorage.removeItem(localSessionStorageKey)
+          }
+        }
+        setAuthLoading(false)
+        return
+      }
+
       if (!supabase) {
         setAuthLoading(false)
         return
@@ -24,7 +44,7 @@ function App() {
 
     initAuth()
 
-    if (!supabase) {
+    if (useLocalMockAuth || !supabase) {
       return undefined
     }
 
@@ -37,13 +57,57 @@ function App() {
     return () => {
       authListener.subscription.unsubscribe()
     }
-  }, [])
+  }, [useLocalMockAuth])
+
+  useEffect(() => {
+    if (!session?.user || useLocalMockAuth || !supabase) return
+    if (!isAuthUserUuid(session.user.id)) return
+
+    const { displayName, avatarUrl } = getUserDisplayFields(session.user)
+
+    let cancelled = false
+    ;(async () => {
+      const { error } = await supabase.from('profiles').upsert(
+        {
+          id: session.user.id,
+          display_name: displayName,
+          avatar_url: avatarUrl || null,
+          email: session.user.email ?? null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'id' },
+      )
+      if (!cancelled && error) {
+        console.error('[profiles]', error.message)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [session, useLocalMockAuth])
 
   const navClassName = useMemo(
     () => ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link'),
     [],
   )
   const signInWithKakao = async () => {
+    if (useLocalMockAuth) {
+      const mockSession = {
+        user: {
+          id: 'local-kakao-user',
+          email: 'local-kakao@example.com',
+          user_metadata: {
+            nickname: '로컬테스트',
+          },
+        },
+      }
+      window.localStorage.setItem(localSessionStorageKey, JSON.stringify(mockSession))
+      setSession(mockSession)
+      setAuthError('')
+      return
+    }
+
     if (!supabase) return
     setAuthError('')
     const { error } = await supabase.auth.signInWithOAuth({
@@ -67,32 +131,34 @@ function App() {
 
   if (!session) {
     return (
-      <div className="app-shell">
-        <div className="center-text">
-          <p>카카오톡 로그인 후 전체 기능을 사용할 수 있습니다.</p>
-          {supabaseConfigError ? (
-            <p className="error">{supabaseConfigError}</p>
-          ) : null}
-          {authError ? <p className="error">{authError}</p> : null}
-          <button type="button" onClick={signInWithKakao}>
-            카카오톡으로 로그인
-          </button>
+      <div className="app-shell login-shell">
+        <div className="login-screen">
+          <div className="login-card">
+            <h1 className="login-title">승리요정</h1>
+            <p className="login-description">로그인은 카카오톡으로만 가능합니다.</p>
+            {supabaseConfigError && !useLocalMockAuth ? (
+              <p className="error">{supabaseConfigError}</p>
+            ) : null}
+            {authError ? <p className="error">{authError}</p> : null}
+            <button type="button" className="kakao-login-button" onClick={signInWithKakao}>
+              <span className="kakao-icon" aria-hidden>
+                <svg viewBox="0 0 24 24" role="img" focusable="false">
+                  <circle cx="12" cy="12" r="12" fill="currentColor" />
+                  <path
+                    d="M6.7 8.8c0-2.1 2.4-3.8 5.3-3.8s5.3 1.7 5.3 3.8-2.4 3.8-5.3 3.8h-.4l-2.2 1.7.5-1.9c-1.9-.6-3.2-2-3.2-3.6Z"
+                    fill="#3c1e1e"
+                  />
+                </svg>
+              </span>
+              <span>카카오톡으로 로그인</span>
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
-  const displayName =
-    session.user.user_metadata?.full_name ||
-    session.user.user_metadata?.name ||
-    session.user.user_metadata?.nickname ||
-    session.user.user_metadata?.preferred_username ||
-    session.user.email?.split('@')[0] ||
-    '회원'
-  const avatarUrl =
-    session.user.user_metadata?.avatar_url ||
-    session.user.user_metadata?.picture ||
-    ''
+  const { displayName, avatarUrl } = getUserDisplayFields(session.user)
 
   return (
     <div className="app-shell">
@@ -119,9 +185,12 @@ function App() {
               </span>
             </div>
           </div>
-          <nav>
-            <NavLink to="/" className={navClassName}>
-              홈
+          <nav className="main-nav-links">
+            <NavLink end to="/" className={navClassName}>
+              내 정보
+            </NavLink>
+            <NavLink to="/rankings" className={navClassName}>
+              순위
             </NavLink>
             <NavLink to="/attendance" className={navClassName}>
               직관일 입력
@@ -132,6 +201,7 @@ function App() {
       <main className="content">
         <Routes>
           <Route path="/" element={<HomePage userId={session.user.id} />} />
+          <Route path="/rankings" element={<RankingsPage userId={session.user.id} />} />
           <Route
             path="/attendance"
             element={<AttendancePage userId={session.user.id} />}
