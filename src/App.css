@@ -12,29 +12,46 @@
   justify-content: center;
 }
 
-.top-nav {
+.app-shell.login-shell {
+  max-width: none;
+  width: 100%;
+}
+
+.app-top-bar {
   display: flex;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: 12px 20px;
+  padding: 10px 16px;
   background: #ffffff;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.top-nav-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+.app-top-bar-brand {
+  flex-shrink: 0;
 }
 
-.user-greeting {
+.app-main-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  max-width: min(420px, 100%);
+  gap: 8px;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-link-logout {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+}
+
+.nav-link-logout:hover {
+  filter: brightness(0.95);
 }
 
 .user-avatar {
@@ -56,40 +73,77 @@
   font-size: 1rem;
 }
 
-.user-greeting-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  min-width: 0;
-}
-
-.user-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.user-welcome {
-  font-size: 0.9rem;
-  color: #111827;
-  line-height: 1.35;
-  word-break: keep-all;
-}
-
 .logo {
-  margin: 0;
-  font-size: 1.2rem;
+  margin: 0px 15px;
+  font-size: 2.5rem;
 }
 
-nav {
+.team-label-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  vertical-align: middle;
+}
+
+.team-logo-inline {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.team-label-text {
+  font-weight: 500;
+}
+
+.profile-card h2 {
+  margin-bottom: 14px;
+}
+
+.profile-layout {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
 }
 
-.main-nav-links {
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.profile-avatar-large {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+}
+
+span.profile-avatar-large.user-avatar-fallback {
+  font-size: 2rem;
+}
+
+.profile-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.profile-name {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.profile-welcome {
+  margin: 0 0 10px;
+  color: #374151;
+  line-height: 1.45;
+}
+
+.profile-email {
+  margin: 0;
+}
+
+.profile-email-label {
+  font-weight: 600;
+  color: #4b5563;
 }
 
 .nav-link {
@@ -154,10 +208,61 @@ td {
   padding: 8px;
 }
 
+th.stat-rank-col,
+td.stat-rank-col {
+  width: 3.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #4b5563;
+}
+
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+}
+
+.dashboard-stadium-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.dashboard-stadium-left,
+.dashboard-stadium-right {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.dashboard-stadium-right {
+  gap: 16px;
+}
+
+.stat-card-stadium {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.stat-card-stadium .table-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+.stat-card-weekstretch {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.stat-card-weekstretch .table-wrap {
+  flex: 1;
+  min-height: 0;
 }
 
 .ranking {
@@ -177,11 +282,22 @@ td {
   margin-top: 0;
 }
 
-.attendance-form {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-  max-width: 360px;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.attendance-intro {
+  max-width: 52rem;
+  line-height: 1.55;
+  color: #4b5563;
 }
 
 .calendar-wrap {
@@ -196,11 +312,41 @@ td {
   margin-bottom: 10px;
 }
 
-.calendar-head h3 {
-  margin: 0;
+.calendar-head--nav {
+  flex-wrap: wrap;
 }
 
-.calendar-head select {
+.calendar-month-title {
+  margin: 0;
+  flex: 1;
+  text-align: center;
+  font-size: 1.15rem;
+  min-width: 8rem;
+}
+
+.attendance-page .calendar-month-arrow {
+  flex-shrink: 0;
+  min-width: 44px;
+  padding: 8px 12px;
+  font-size: 1.35rem;
+  line-height: 1;
+  background: #f3f4f6;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.attendance-page .calendar-month-arrow:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.attendance-page .calendar-month-arrow:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.calendar-month-jump input[type='month'] {
   font: inherit;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -222,52 +368,145 @@ td {
 .calendar-day-label {
   text-align: center;
   font-size: 0.85rem;
+  font-weight: 600;
   color: #6b7280;
 }
 
-.calendar-cell {
+.calendar-day-label--sat {
+  color: #2563eb;
+}
+
+.calendar-day-label--sun {
+  color: #dc2626;
+}
+
+.attendance-page .calendar-cell {
+  position: relative;
+  box-sizing: border-box;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   background: #fff;
   color: #111827;
-  min-height: 84px;
-  padding: 8px;
+  min-height: 108px;
+  padding: 6px 6px 4px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: stretch;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
 }
 
-.calendar-cell.has-match:hover {
-  border-color: #fb923c;
-  box-shadow: 0 0 0 1px #fb923c inset;
+.attendance-page .calendar-cell:hover:not(:disabled) {
+  border-color: #fdba74;
+  box-shadow: 0 0 0 1px rgba(251, 146, 60, 0.35);
 }
 
-.calendar-cell.selected {
-  border-color: #ea580c;
-  box-shadow: 0 0 0 1px #ea580c inset;
+.attendance-page .calendar-cell:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
-.calendar-cell:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.attendance-page .calendar-cell--attended {
+  border: 3px solid #c2410c;
+  box-shadow: none;
 }
 
-.calendar-cell.blank {
+.attendance-page .calendar-cell--holiday {
+  background: #fff7f7;
+}
+
+.attendance-page .calendar-cell--blank {
   border: 0;
   background: transparent;
-  min-height: 84px;
+  min-height: 108px;
+  padding: 0;
+  cursor: default;
+  pointer-events: none;
 }
 
-.day-number {
-  font-weight: 600;
+.calendar-day-number {
+  font-weight: 700;
+  font-size: 0.95rem;
+  align-self: flex-start;
 }
 
-.match-opponent,
-.match-result {
-  font-size: 0.75rem;
-  line-height: 1.25;
-  text-align: left;
+.calendar-day-number--sat {
+  color: #2563eb;
+}
+
+.calendar-day-number--sun {
+  color: #dc2626;
+}
+
+.calendar-day-number--holiday {
+  color: #b91c1c;
+}
+
+.calendar-cell-emblem-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+}
+
+.calendar-opponent-emblem {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.calendar-emblem-placeholder {
+  display: block;
+  width: 36px;
+  height: 36px;
+}
+
+.calendar-result-badge {
+  align-self: center;
+  margin-top: 2px;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.calendar-result-badge--none,
+.calendar-result-badge--pending {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.calendar-result-badge--win {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.calendar-result-badge--loss {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.calendar-result-badge--draw {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.calendar-holiday-caption {
+  margin-top: auto;
+  padding-top: 2px;
+  font-size: 0.62rem;
+  line-height: 1.2;
+  color: #b91c1c;
+  text-align: center;
+  word-break: keep-all;
+}
+
+.calendar-holiday-spacer {
+  min-height: 0.85rem;
+  margin-top: auto;
 }
 
 input,
@@ -290,66 +529,160 @@ button {
   padding: 56px 16px;
 }
 
-.login-screen {
-  display: flex;
-  width: 100%;
-  justify-content: center;
-  padding: 16px;
+.do-hyeon-regular {
+  font-family: 'Do Hyeon', sans-serif;
+  font-weight: 400;
+  font-style: normal;
 }
 
-.login-card {
-  width: min(440px, 100%);
+.login-screen {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  /* 세로 9:16 스마트폰 프레임 비율 — PC에서는 더 크게(높이 기준), 상한은 넓은 화면용 */
+  aspect-ratio: 9 / 16;
+  width: min(560px, calc((min(94dvh, 100dvh - 24px)) * 9 / 16), calc(100vw - 32px));
+  max-height: min(94dvh, calc((100vw - 32px) * 16 / 9));
+  padding: clamp(20px, 4.5vw, 36px) clamp(16px, 4.5vw, 28px);
+  border-radius: 20px;
+  background: linear-gradient(165deg, #fffdfb 0%, #fff4e6 45%, #ffe8d4 100%);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+}
+
+.login-card {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   text-align: center;
-  padding: 28px 24px;
-  background: linear-gradient(160deg, #fff7ed 0%, #ffedd5 100%);
-  border: 2px solid #fb923c;
-  border-radius: 18px;
-  box-shadow: 0 14px 30px rgba(251, 146, 60, 0.2);
+  padding: 8px 4px 4px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .login-title {
   margin: 0;
-  font-size: clamp(1.8rem, 4vw, 2.4rem);
-  font-weight: 800;
-  color: #111827;
+  font-size: 85px;
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  color: #1c1917;
+}
+
+.login-tagline {
+  margin: 0 0 50px;
+  max-width: 16em;
+  font-size: clamp(0.95rem, 2.8vmin, 1.2rem);
+  font-weight: 500;
+  line-height: 1.65;
+  letter-spacing: 0.04em;
+  color: #78716c;
+  font-style: italic;
 }
 
 .login-description {
   margin: 0;
-  color: #374151;
+  font-size: clamp(0.82rem, 2.2vmin, 0.95rem);
+  color: #57534e;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.login-participation-wrap {
+  width: 100%;
+  max-width: min(400px, 100%);
+  margin-top: 4px;
+  text-align: left;
+}
+
+.login-participation-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: clamp(0.8rem, 2vmin, 0.9rem);
+  font-weight: 600;
+  color: #44403c;
+}
+
+.login-participation-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  color: #1c1917;
+  background: #fff;
+  border: 1px solid #d6d3d1;
+  border-radius: 10px;
+  outline: none;
+}
+
+.login-participation-input:focus {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.2);
+}
+
+.login-participation-error {
+  margin: 0;
+  width: 100%;
+  max-width: min(400px, 100%);
+  text-align: center;
+  font-size: 0.95rem;
 }
 
 .kakao-login-button {
-  margin-top: 4px;
+  margin-top: 10px;
+  width: 100%;
+  max-width: min(400px, 100%);
+  min-height: 52px;
+  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   background: #fee500;
-  color: #3c1e1e;
-  border: 1px solid #facc15;
-  font-weight: 700;
+  color: rgba(0, 0, 0, 0.85);
+  border: 0;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
 }
 
 .kakao-login-button:hover {
-  filter: brightness(0.97);
+  filter: brightness(0.98);
+}
+
+.kakao-login-button:active {
+  filter: brightness(0.94);
 }
 
 .kakao-login-button .kakao-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: #000;
 }
 
 .kakao-login-button .kakao-icon svg {
   width: 100%;
   height: 100%;
+  display: block;
+}
+
+.kakao-login-button-label {
+  line-height: 1.2;
 }
 
 .error {
@@ -398,26 +731,33 @@ button {
 }
 
 @media (max-width: 768px) {
-  .grid2 {
+  .grid2,
+  .dashboard-stadium-row {
     grid-template-columns: 1fr;
   }
 
-  .top-nav {
+  .stat-card-stadium,
+  .stat-card-weekstretch {
+    flex: initial;
+    min-height: 0;
+  }
+
+  .stat-card-stadium .table-wrap,
+  .stat-card-weekstretch .table-wrap {
+    flex: initial;
+  }
+
+  .app-top-bar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
-  .top-nav-right {
-    align-items: flex-start;
-    width: 100%;
+  .app-main-nav {
+    justify-content: flex-start;
   }
 
-  .user-greeting {
-    max-width: 100%;
-  }
-
-  .calendar-cell {
-    min-height: 74px;
-    padding: 6px;
+  .attendance-page .calendar-cell {
+    min-height: 92px;
+    padding: 5px;
   }
 }

@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { buildDashboardStats } from '../lib/stats'
+import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 
-const StatSection = ({ title, rows }) => (
-  <section className="card">
+const StatSection = ({
+  title,
+  rows,
+  showTeamLogoInLabel = false,
+  sectionClassName = '',
+  showRank = false,
+}) => (
+  <section className={['card', sectionClassName].filter(Boolean).join(' ')}>
     <h3>{title}</h3>
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
+            {showRank ? <th className="stat-rank-col">순위</th> : null}
             <th>구분</th>
             <th>경기</th>
             <th>승</th>
@@ -16,14 +24,38 @@ const StatSection = ({ title, rows }) => (
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.label}>
-              <td>{row.label}</td>
-              <td>{row.total}</td>
-              <td>{row.wins}</td>
-              <td>{row.winRate}%</td>
-            </tr>
-          ))}
+          {rows.map((row, index) => {
+            const logoUrl = showTeamLogoInLabel ? getOpponentTeamLogoUrl(row.label) : null
+            return (
+              <tr key={row.label}>
+                {showRank ? <td className="stat-rank-col">{index + 1}</td> : null}
+                <td>
+                  {showTeamLogoInLabel ? (
+                    <span className="team-label-cell">
+                      {logoUrl ? (
+                        <img
+                          className="team-logo-inline"
+                          src={logoUrl}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                      ) : null}
+                      <span className="team-label-text">{row.label}</span>
+                    </span>
+                  ) : (
+                    row.label
+                  )}
+                </td>
+                <td>{row.total}</td>
+                <td>{row.wins}</td>
+                <td>{row.winRate}%</td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
@@ -44,18 +76,30 @@ function HomePage({ userId }) {
       }
       setLoading(true)
       setError('')
-      const { data, error: queryError } = await supabase
-        .from('user_attendance')
-        .select(
-          'match_id, match:matches(game_date, stadium, opponent_team, home_away, winner_team, player_stats)',
-        )
-        .eq('user_id', userId)
-        .order('attended_at', { ascending: false })
+      const matchFields =
+        'id, game_date, stadium, opponent_team, home_away, winner_team, player_stats, hanwha_score, opponent_score'
+      const [{ data: attendanceRows, error: attendanceError }, { data: allMatches, error: matchesError }] =
+        await Promise.all([
+          supabase
+            .from('user_attendance')
+            .select(`attended_at, match_id, match:matches(${matchFields})`)
+            .eq('user_id', userId)
+            .order('attended_at', { ascending: false }),
+          supabase.from('matches').select(matchFields),
+        ])
 
+      const queryError = attendanceError || matchesError
       if (queryError) {
         setError(queryError.message)
+        setAttendanceRecords([])
       } else {
-        setAttendanceRecords(data ?? [])
+        const byDate = new Map((allMatches ?? []).map((m) => [m.game_date, m]))
+        const enriched = (attendanceRows ?? []).map((row) => ({
+          attended_at: row.attended_at,
+          match_id: row.match_id,
+          match: row.match ?? byDate.get(row.attended_at) ?? null,
+        }))
+        setAttendanceRecords(enriched)
       }
       setLoading(false)
     }
@@ -85,15 +129,40 @@ function HomePage({ userId }) {
             <h2>내 승률</h2>
             <p className="big-number">{stats.summary.winRate}%</p>
             <p>
-              {stats.summary.wins}승 {stats.summary.losses}패 / 총{' '}
-              {stats.summary.totalGames}경기
+              {stats.summary.wins}승 {stats.summary.losses}패
+              {stats.summary.draws > 0 ? ` ${stats.summary.draws}무` : ''} (승패 확정{' '}
+              {stats.summary.decidedGames}경기) / 총 직관 {stats.summary.totalGames}경기
+              {stats.summary.undecidedGames > 0
+                ? ` · 미확정 ${stats.summary.undecidedGames}경기는 승률에 반영하지 않습니다`
+                : ''}
             </p>
           </section>
 
-          <StatSection title="경기장 별 승률" rows={stats.byStadium} />
-          <StatSection title="홈 / 원정 승률" rows={stats.byHomeAway} />
-          <StatSection title="평일 / 주말 승률" rows={stats.byWeekType} />
-          <StatSection title="상대팀 별 승률" rows={stats.byOpponent} />
+          <div className="dashboard-stadium-row">
+            <div className="dashboard-stadium-left">
+              <StatSection
+                title="경기장 별 승률"
+                rows={stats.byStadium}
+                sectionClassName="stat-card-stadium"
+                showRank
+              />
+            </div>
+            <div className="dashboard-stadium-right">
+              <StatSection title="홈 / 원정 승률" rows={stats.byHomeAway} showRank />
+              <StatSection
+                title="평일 / 주말 승률"
+                rows={stats.byWeekType}
+                sectionClassName="stat-card-weekstretch"
+                showRank
+              />
+            </div>
+          </div>
+          <StatSection
+            title="상대팀 별 승률"
+            rows={stats.byOpponent}
+            showTeamLogoInLabel
+            showRank
+          />
 
           <section className="card grid2">
             <div>

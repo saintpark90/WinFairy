@@ -1,70 +1,109 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
+import { getKoreanHolidayLabel } from '../lib/koreanHolidays'
+import { getMatchResultKind } from '../lib/stats'
 
-const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
+const DAY_LABELS_MON = ['월', '화', '수', '목', '금', '토', '일']
 
 const toMonthKey = (dateText) => dateText.slice(0, 7)
 
-const buildResultLabel = (match) => {
-  if (
-    typeof match.hanwha_score !== 'number' ||
-    typeof match.opponent_score !== 'number'
-  ) {
-    return match.game_status || '경기 전'
-  }
-  if (match.hanwha_score > match.opponent_score) {
-    return `승 ${match.hanwha_score}:${match.opponent_score}`
-  }
-  if (match.hanwha_score < match.opponent_score) {
-    return `패 ${match.hanwha_score}:${match.opponent_score}`
-  }
-  return `무 ${match.hanwha_score}:${match.opponent_score}`
+const localYearMonth = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const shiftMonth = (ym, delta) => {
+  const [y, m] = ym.split('-').map(Number)
+  const d = new Date(y, m - 1 + delta, 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+const formatMonthTitle = (ym) => {
+  const [y, m] = ym.split('-')
+  return `${y}년 ${Number(m)}월`
+}
+
+/** 월~일: 0~6 (월=0) */
+const weekdayMonFirst = (dateText) => {
+  const d = new Date(`${dateText}T12:00:00`)
+  return (d.getDay() + 6) % 7
+}
+
+const resultLabelShort = (match) => {
+  const kind = getMatchResultKind(match)
+  if (kind === 'none' || kind === 'pending') return '경기 전'
+  if (kind === 'draw') return '무'
+  if (kind === 'win') return '승'
+  return '패'
 }
 
 function AttendancePage({ userId }) {
-  const [date, setDate] = useState('')
-  const [message, setMessage] = useState('')
-  const [isError, setIsError] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(true)
   const [calendarError, setCalendarError] = useState('')
   const [matches, setMatches] = useState([])
-  const [viewMonth, setViewMonth] = useState(
-    new Date().toISOString().slice(0, 7),
-  )
+  const [viewMonth, setViewMonth] = useState(localYearMonth)
+  const [attendedSet, setAttendedSet] = useState(() => new Set())
+  const [toggleBusy, setToggleBusy] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
+  const [actionIsError, setActionIsError] = useState(false)
 
   useEffect(() => {
-    const fetchMatches = async () => {
+    let cancelled = false
+
+    const run = async () => {
       if (!supabase) {
         setCalendarError('Supabase 환경변수가 비어 있어 경기 일정을 불러올 수 없습니다.')
         setCalendarLoading(false)
         return
       }
+
       setCalendarLoading(true)
       setCalendarError('')
-      const { data, error } = await supabase
-        .from('matches')
-        .select(
-          'id, game_date, opponent_team, stadium, game_status, hanwha_score, opponent_score',
-        )
-        .order('game_date', { ascending: false })
+      setActionMessage('')
+      setActionIsError(false)
 
-      if (error) {
-        setCalendarError(error.message)
-        setCalendarLoading(false)
-        return
+      const matchSelect =
+        'id, game_date, opponent_team, stadium, game_status, hanwha_score, opponent_score, winner_team'
+
+      const [matchRes, attRes] = await Promise.all([
+        supabase.from('matches').select(matchSelect).order('game_date', { ascending: false }),
+        supabase.from('user_attendance').select('attended_at').eq('user_id', userId),
+      ])
+
+      if (cancelled) return
+
+      if (matchRes.error) {
+        setCalendarError(matchRes.error.message)
+        setMatches([])
+      } else {
+        const data = matchRes.data ?? []
+        setMatches(data)
+        if (data.length > 0) {
+          setViewMonth((prev) => {
+            const first = toMonthKey(data[0].game_date)
+            const has = data.some((m) => toMonthKey(m.game_date) === prev)
+            return has ? prev : first
+          })
+        }
       }
 
-      setMatches(data ?? [])
-      if (!date && (data?.length ?? 0) > 0) {
-        setDate(data[0].game_date)
-        setViewMonth(toMonthKey(data[0].game_date))
+      if (attRes.error) {
+        setActionMessage(attRes.error.message)
+        setActionIsError(true)
+        setAttendedSet(new Set())
+      } else {
+        setAttendedSet(new Set((attRes.data ?? []).map((row) => row.attended_at)))
       }
+
       setCalendarLoading(false)
     }
 
-    fetchMatches()
-  }, [])
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
 
   const matchesByDate = useMemo(() => {
     const map = new Map()
@@ -74,137 +113,159 @@ function AttendancePage({ userId }) {
     return map
   }, [matches])
 
-  const months = useMemo(() => {
-    const monthSet = new Set(matches.map((match) => toMonthKey(match.game_date)))
-    return [...monthSet].sort((a, b) => a.localeCompare(b))
-  }, [matches])
-
-  const activeMonth = useMemo(() => {
-    if (!months.length) return viewMonth
-    if (months.includes(viewMonth)) return viewMonth
-    return months[months.length - 1]
-  }, [months, viewMonth])
-
   const monthGrid = useMemo(() => {
-    const [yearText, monthText] = activeMonth.split('-')
+    const [yearText, monthText] = viewMonth.split('-')
     const year = Number(yearText)
     const monthIndex = Number(monthText) - 1
     if (!year || monthIndex < 0 || monthIndex > 11) return []
 
     const firstDay = new Date(year, monthIndex, 1)
     const lastDate = new Date(year, monthIndex + 1, 0).getDate()
+    const leading = (firstDay.getDay() + 6) % 7
     const cells = []
 
-    for (let i = 0; i < firstDay.getDay(); i += 1) {
+    for (let i = 0; i < leading; i += 1) {
       cells.push({ key: `blank-${i}`, isBlank: true })
     }
     for (let day = 1; day <= lastDate; day += 1) {
-      const dateText = `${activeMonth}-${String(day).padStart(2, '0')}`
+      const dateText = `${viewMonth}-${String(day).padStart(2, '0')}`
       const match = matchesByDate.get(dateText)
+      const holiday = getKoreanHolidayLabel(dateText)
+      const dow = weekdayMonFirst(dateText)
       cells.push({
         key: dateText,
         isBlank: false,
         day,
         dateText,
         match,
-        isSelected: date === dateText,
+        holiday,
+        dow,
+        isSaturday: dow === 5,
+        isSunday: dow === 6,
       })
     }
     return cells
-  }, [activeMonth, date, matchesByDate])
+  }, [viewMonth, matchesByDate])
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const toggleAttendanceForDate = async (dateText) => {
     if (!supabase) {
-      setIsError(true)
-      setMessage('Supabase 환경변수가 비어 있어 저장할 수 없습니다.')
+      setActionMessage('Supabase 환경변수가 비어 있어 저장할 수 없습니다.')
+      setActionIsError(true)
       return
     }
-    setLoading(true)
-    setMessage('')
-    setIsError(false)
+    if (toggleBusy) return
+    setToggleBusy(true)
+    setActionMessage('')
+    setActionIsError(false)
 
-    const { data: match, error: matchError } = await supabase
-      .from('matches')
-      .select('id, game_date, opponent_team, stadium, winner_team')
-      .eq('game_date', date)
-      .maybeSingle()
+    const wasAttended = attendedSet.has(dateText)
 
-    if (matchError || !match) {
-      setIsError(true)
-      setMessage('해당 날짜의 한화 경기 정보가 없습니다. 먼저 경기 데이터를 적재해 주세요.')
-      setLoading(false)
-      return
+    try {
+      if (wasAttended) {
+        const { error } = await supabase
+          .from('user_attendance')
+          .delete()
+          .eq('user_id', userId)
+          .eq('attended_at', dateText)
+        if (error) throw error
+        setAttendedSet((prev) => {
+          const next = new Set(prev)
+          next.delete(dateText)
+          return next
+        })
+        setActionMessage('직관일에서 제외했습니다.')
+      } else {
+        const match = matchesByDate.get(dateText)
+        const { error } = await supabase.from('user_attendance').upsert(
+          {
+            user_id: userId,
+            attended_at: dateText,
+            match_id: match?.id ?? null,
+          },
+          { onConflict: 'user_id,attended_at' },
+        )
+        if (error) throw error
+        setAttendedSet((prev) => new Set(prev).add(dateText))
+        setActionMessage('직관일로 저장했습니다.')
+      }
+    } catch (err) {
+      setActionMessage(
+        err?.message ??
+          '저장에 실패했습니다. Supabase에 직관 예정일 마이그레이션이 적용됐는지 확인해 주세요.',
+      )
+      setActionIsError(true)
+    } finally {
+      setToggleBusy(false)
     }
-
-    const { error: insertError } = await supabase.from('user_attendance').upsert(
-      {
-        user_id: userId,
-        match_id: match.id,
-        attended_at: date,
-      },
-      { onConflict: 'user_id,match_id' },
-    )
-
-    if (insertError) {
-      setIsError(true)
-      setMessage(insertError.message)
-      setLoading(false)
-      return
-    }
-
-    setMessage(
-      `${match.game_date} ${match.opponent_team}전 (${match.stadium}) 직관일이 저장되었습니다.`,
-    )
-    setDate('')
-    setLoading(false)
   }
 
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.target.closest('input, textarea, select, [contenteditable="true"]')) return
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        setViewMonth((m) => shiftMonth(m, -1))
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        setViewMonth((m) => shiftMonth(m, 1))
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   return (
-    <section className="card form-card">
+    <section className="card form-card attendance-page">
       <h2>직관일 입력</h2>
-      <p>
-        날짜만 고르면 경기 정보는 `matches` 테이블에서 자동으로 찾아 연결합니다.
+      <p className="attendance-intro">
+        달력에서 날짜를 누르면 직관(또는 직관 예정)이 바로 저장되거나 해제됩니다. 같은 날짜를
+        다시 누르면 취소됩니다. 좌우 화살표 또는 키보드 방향키(← →)로 달을 옮길 수 있습니다.
       </p>
-      <form onSubmit={handleSubmit} className="attendance-form">
-        <label htmlFor="attendance-date">직관 날짜</label>
-        <input
-          id="attendance-date"
-          type="date"
-          value={date}
-          onChange={(event) => setDate(event.target.value)}
-          required
-        />
-        <button type="submit" disabled={loading}>
-          {loading ? '저장 중...' : '저장'}
-        </button>
-      </form>
+
       <div className="calendar-wrap">
-        <div className="calendar-head">
-          <h3>경기일 달력 선택</h3>
-          {months.length ? (
-            <select
-              value={activeMonth}
-              onChange={(event) => setViewMonth(event.target.value)}
-            >
-              {months.map((monthKey) => (
-                <option key={monthKey} value={monthKey}>
-                  {monthKey.replace('-', '년 ')}월
-                </option>
-              ))}
-            </select>
-          ) : null}
+        <div className="calendar-head calendar-head--nav">
+          <button
+            type="button"
+            className="calendar-month-arrow"
+            aria-label="이전 달"
+            disabled={calendarLoading}
+            onClick={() => setViewMonth((m) => shiftMonth(m, -1))}
+          >
+            ‹
+          </button>
+          <h3 className="calendar-month-title">{formatMonthTitle(viewMonth)}</h3>
+          <button
+            type="button"
+            className="calendar-month-arrow"
+            aria-label="다음 달"
+            disabled={calendarLoading}
+            onClick={() => setViewMonth((m) => shiftMonth(m, 1))}
+          >
+            ›
+          </button>
+          <label className="calendar-month-jump">
+            <span className="sr-only">달 이동</span>
+            <input
+              type="month"
+              value={viewMonth}
+              disabled={calendarLoading}
+              onChange={(ev) => {
+                if (ev.target.value) setViewMonth(ev.target.value)
+              }}
+            />
+          </label>
         </div>
-        {calendarLoading ? <p>달력 데이터를 불러오는 중...</p> : null}
+
+        {calendarLoading ? <p>경기 일정을 불러오는 중...</p> : null}
         {calendarError ? <p className="error">{calendarError}</p> : null}
-        {!calendarLoading && !calendarError && !matches.length ? (
-          <p>등록된 경기 일정이 없습니다. 먼저 KBO 데이터 수집을 실행해 주세요.</p>
-        ) : null}
-        {!calendarLoading && !calendarError && matches.length ? (
+        {!calendarLoading && !calendarError ? (
           <>
             <div className="calendar-days">
-              {DAY_LABELS.map((label) => (
-                <div key={label} className="calendar-day-label">
+              {DAY_LABELS_MON.map((label, i) => (
+                <div
+                  key={label}
+                  className={`calendar-day-label${i === 5 ? ' calendar-day-label--sat' : ''}${i === 6 ? ' calendar-day-label--sun' : ''}`}
+                >
                   {label}
                 </div>
               ))}
@@ -212,27 +273,71 @@ function AttendancePage({ userId }) {
             <div className="calendar-grid">
               {monthGrid.map((cell) =>
                 cell.isBlank ? (
-                  <div key={cell.key} className="calendar-cell blank" />
+                  <div key={cell.key} className="calendar-cell calendar-cell--blank" />
                 ) : (
                   <button
                     key={cell.key}
                     type="button"
-                    className={`calendar-cell${cell.isSelected ? ' selected' : ''}${cell.match ? ' has-match' : ''}`}
-                    disabled={!cell.match}
-                    onClick={() => setDate(cell.dateText)}
+                    disabled={toggleBusy}
+                    className={[
+                      'calendar-cell',
+                      cell.match ? 'calendar-cell--has-match' : 'calendar-cell--no-match',
+                      attendedSet.has(cell.dateText) ? 'calendar-cell--attended' : '',
+                      cell.holiday ? 'calendar-cell--holiday' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                    onClick={() => toggleAttendanceForDate(cell.dateText)}
                   >
-                    <span className="day-number">{cell.day}</span>
-                    {cell.match ? (
-                      <>
-                        <span className="match-opponent">
-                          vs {cell.match.opponent_team}
-                        </span>
-                        <span className="match-result">
-                          {buildResultLabel(cell.match)}
-                        </span>
-                      </>
+                    <span
+                      className={[
+                        'calendar-day-number',
+                        cell.holiday ? 'calendar-day-number--holiday' : '',
+                        !cell.holiday && cell.isSaturday ? 'calendar-day-number--sat' : '',
+                        !cell.holiday && cell.isSunday ? 'calendar-day-number--sun' : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      {cell.day}
+                    </span>
+                    <span className="calendar-cell-emblem-wrap" aria-hidden={!cell.match}>
+                      {cell.match ? (
+                        (() => {
+                          const emblemUrl = getOpponentTeamLogoUrl(cell.match.opponent_team)
+                          return emblemUrl ? (
+                            <img
+                              className="calendar-opponent-emblem"
+                              src={emblemUrl}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              onError={(ev) => {
+                                ev.currentTarget.style.display = 'none'
+                              }}
+                            />
+                          ) : (
+                            <span className="calendar-emblem-placeholder" />
+                          )
+                        })()
+                      ) : (
+                        <span className="calendar-emblem-placeholder" />
+                      )}
+                    </span>
+                    <span
+                      className={[
+                        'calendar-result-badge',
+                        cell.match
+                          ? `calendar-result-badge--${getMatchResultKind(cell.match)}`
+                          : 'calendar-result-badge--none',
+                      ].join(' ')}
+                    >
+                      {resultLabelShort(cell.match)}
+                    </span>
+                    {cell.holiday ? (
+                      <span className="calendar-holiday-caption">{cell.holiday}</span>
                     ) : (
-                      <span className="match-result">경기 없음</span>
+                      <span className="calendar-holiday-spacer" />
                     )}
                   </button>
                 ),
@@ -241,8 +346,9 @@ function AttendancePage({ userId }) {
           </>
         ) : null}
       </div>
-      {message ? (
-        <p className={isError ? 'error' : 'success'}>{message}</p>
+
+      {actionMessage ? (
+        <p className={actionIsError ? 'error' : 'success'}>{actionMessage}</p>
       ) : null}
     </section>
   )

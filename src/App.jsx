@@ -6,11 +6,16 @@ import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
 import HomePage from './pages/HomePage'
 import AttendancePage from './pages/AttendancePage'
 import RankingsPage from './pages/RankingsPage'
+import ProfilePage from './pages/ProfilePage'
+
+const PARTICIPATION_CODE = '0245'
 
 function App() {
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [authError, setAuthError] = useState('')
+  const [participationCode, setParticipationCode] = useState('')
+  const [participationCodeError, setParticipationCodeError] = useState('')
   const isLocalDevHost =
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1'
@@ -92,6 +97,14 @@ function App() {
     [],
   )
   const signInWithKakao = async () => {
+    const trimmed = participationCode.trim()
+    if (trimmed !== PARTICIPATION_CODE) {
+      setParticipationCodeError('참여코드가 올바르지 않습니다.')
+      setAuthError('')
+      return
+    }
+    setParticipationCodeError('')
+
     if (useLocalMockAuth) {
       const mockSession = {
         user: {
@@ -121,6 +134,18 @@ function App() {
     }
   }
 
+  const signOut = async () => {
+    if (useLocalMockAuth) {
+      window.localStorage.removeItem(localSessionStorageKey)
+      setSession(null)
+      return
+    }
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
+    setSession(null)
+  }
+
   if (authLoading) {
     return (
       <div className="app-shell">
@@ -134,23 +159,46 @@ function App() {
       <div className="app-shell login-shell">
         <div className="login-screen">
           <div className="login-card">
-            <h1 className="login-title">승리요정</h1>
-            <p className="login-description">로그인은 카카오톡으로만 가능합니다.</p>
-            {supabaseConfigError && !useLocalMockAuth ? (
-              <p className="error">{supabaseConfigError}</p>
-            ) : null}
-            {authError ? <p className="error">{authError}</p> : null}
+            <h1 className="login-title do-hyeon-regular">승리요정</h1>
+            <p className="login-tagline">당신의 승리기운을 위하여</p>
+            <p className="login-description"></p>
+            <div className="login-participation-wrap">
+              <input
+                id="login-participation-code"
+                className="login-participation-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="참여코드를 입력하세요"
+                value={participationCode}
+                onChange={(e) => {
+                  setParticipationCode(e.target.value)
+                  setParticipationCodeError('')
+                }}
+              />
+            </div>
+            {participationCodeError ? (
+              <p className="error login-participation-error" role="alert">
+                {participationCodeError}
+              </p>
+            ) : (
+              <>
+                {supabaseConfigError && !useLocalMockAuth ? (
+                  <p className="error">{supabaseConfigError}</p>
+                ) : null}
+                {authError ? <p className="error">{authError}</p> : null}
+              </>
+            )}
             <button type="button" className="kakao-login-button" onClick={signInWithKakao}>
               <span className="kakao-icon" aria-hidden>
-                <svg viewBox="0 0 24 24" role="img" focusable="false">
-                  <circle cx="12" cy="12" r="12" fill="currentColor" />
+                <svg viewBox="0 0 24 22" role="img" focusable="false" xmlns="http://www.w3.org/2000/svg">
                   <path
-                    d="M6.7 8.8c0-2.1 2.4-3.8 5.3-3.8s5.3 1.7 5.3 3.8-2.4 3.8-5.3 3.8h-.4l-2.2 1.7.5-1.9c-1.9-.6-3.2-2-3.2-3.6Z"
-                    fill="#3c1e1e"
+                    fill="currentColor"
+                    d="M12 1C5.65 1 .5 5.05.5 10.1c0 2.75 1.42 5.2 3.65 6.85L3 21l5.15-3.4c1.15.25 2.35.4 3.85.4 6.35 0 11.5-4.05 11.5-9.1S18.35 1 12 1Z"
                   />
                 </svg>
               </span>
-              <span>카카오톡으로 로그인</span>
+              <span className="kakao-login-button-label">카카오톡으로 로그인</span>
             </button>
           </div>
         </div>
@@ -158,45 +206,29 @@ function App() {
     )
   }
 
-  const { displayName, avatarUrl } = getUserDisplayFields(session.user)
-
   return (
     <div className="app-shell">
-      <header className="top-nav">
-        <h1 className="logo">승요 이글스</h1>
-        <div className="top-nav-right">
-          <div className="user-greeting">
-            {avatarUrl ? (
-              <img
-                className="user-avatar"
-                src={avatarUrl}
-                alt=""
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <span className="user-avatar user-avatar-fallback" aria-hidden>
-                {displayName.slice(0, 1)}
-              </span>
-            )}
-            <div className="user-greeting-text">
-              <span className="user-name">{displayName}</span>
-              <span className="user-welcome">
-                승리요정 {displayName}님, 어서오세요!
-              </span>
-            </div>
-          </div>
-          <nav className="main-nav-links">
-            <NavLink end to="/" className={navClassName}>
-              내 정보
-            </NavLink>
-            <NavLink to="/rankings" className={navClassName}>
-              순위
-            </NavLink>
-            <NavLink to="/attendance" className={navClassName}>
-              직관일 입력
-            </NavLink>
-          </nav>
+      <header className="app-top-bar">
+        <div className="app-top-bar-brand">
+          <h1 className="logo do-hyeon-regular">승리요정</h1>
         </div>
+        <nav className="app-main-nav" aria-label="메인 메뉴">
+          <NavLink end to="/" className={navClassName}>
+            메인화면
+          </NavLink>
+          <NavLink to="/rankings" className={navClassName}>
+            순위
+          </NavLink>
+          <NavLink to="/attendance" className={navClassName}>
+            직관일 입력
+          </NavLink>
+          <NavLink to="/profile" className={navClassName}>
+            내 정보
+          </NavLink>
+          <button type="button" className="nav-link nav-link-logout" onClick={signOut}>
+            로그아웃
+          </button>
+        </nav>
       </header>
       <main className="content">
         <Routes>
@@ -206,6 +238,7 @@ function App() {
             path="/attendance"
             element={<AttendancePage userId={session.user.id} />}
           />
+          <Route path="/profile" element={<ProfilePage user={session.user} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

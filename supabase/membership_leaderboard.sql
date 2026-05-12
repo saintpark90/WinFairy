@@ -79,20 +79,33 @@ as $$
     count(*)::bigint as games,
     sum(
       case
-        when m.winner_team is not null and m.winner_team like '%한화%' then 1
+        when m.winner_team is not null and trim(both from m.winner_team) <> ''
+          and m.winner_team like '%한화%' then 1
         else 0
       end
     )::bigint as wins,
     round(
       case
-        when count(*) > 0 then (
+        when sum(
+          case
+            when m.winner_team is not null and trim(both from m.winner_team) <> '' then 1
+            else 0
+          end
+        ) > 0 then (
           100.0 *
           sum(
             case
-              when m.winner_team is not null and m.winner_team like '%한화%' then 1
+              when m.winner_team is not null and trim(both from m.winner_team) <> ''
+                and m.winner_team like '%한화%' then 1
               else 0
             end
-          )::numeric / count(*)::numeric
+          )::numeric /
+          sum(
+            case
+              when m.winner_team is not null and trim(both from m.winner_team) <> '' then 1
+              else 0
+            end
+          )::numeric
         )
         else 0::numeric
       end,
@@ -100,7 +113,7 @@ as $$
     ) as win_rate
   from public.profiles p
   inner join public.user_attendance ua on ua.user_id = p.id
-  inner join public.matches m on m.id = ua.match_id
+  left join public.matches m on m.id = ua.match_id
   group by p.id, p.display_name, p.avatar_url
   having count(*) > 0
   order by win_rate desc, wins desc, games desc;
