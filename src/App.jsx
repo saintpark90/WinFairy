@@ -6,6 +6,7 @@ import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
 import HomePage from './pages/HomePage'
 import AttendancePage from './pages/AttendancePage'
 import RankingsPage from './pages/RankingsPage'
+import TeamStatsPage from './pages/TeamStatsPage'
 import ProfilePage from './pages/ProfilePage'
 
 const PARTICIPATION_CODE = '0245'
@@ -16,6 +17,12 @@ function App() {
   const [authError, setAuthError] = useState('')
   const [participationCode, setParticipationCode] = useState('')
   const [participationCodeError, setParticipationCodeError] = useState('')
+
+  const userDisplayName = session?.user?.user_metadata?.name
+    || session?.user?.user_metadata?.nickname
+    || session?.user?.user_metadata?.full_name
+    || session?.user?.email?.split('@')[0]
+    || '사용자'
   const isLocalDevHost =
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1'
@@ -219,6 +226,9 @@ function App() {
           <NavLink to="/rankings" className={navClassName}>
             순위
           </NavLink>
+          <NavLink to="/team-stats" className={navClassName}>
+            팀성적
+          </NavLink>
           <NavLink to="/attendance" className={navClassName}>
             직관일 입력
           </NavLink>
@@ -232,8 +242,12 @@ function App() {
       </header>
       <main className="content">
         <Routes>
-          <Route path="/" element={<HomePage userId={session.user.id} />} />
+          <Route
+            path="/"
+            element={<HomePage userId={session.user.id} userDisplayName={userDisplayName} />}
+          />
           <Route path="/rankings" element={<RankingsPage userId={session.user.id} />} />
+          <Route path="/team-stats" element={<TeamStatsPage userId={session.user.id} />} />
           <Route
             path="/attendance"
             element={<AttendancePage userId={session.user.id} />}

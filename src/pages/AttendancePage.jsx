@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
-import { getKoreanHolidayLabel } from '../lib/koreanHolidays'
-import { getMatchResultKind } from '../lib/stats'
+import { getKoreanDayMark, isKoreanNonRedDayMark, isKoreanPublicHolidayMark } from '../lib/koreanHolidays'
+import { getMatchResultKind, isMatchCancelled, isMatchDecided } from '../lib/stats'
 
 const DAY_LABELS_MON = ['월', '화', '수', '목', '금', '토', '일']
 
@@ -32,10 +32,30 @@ const weekdayMonFirst = (dateText) => {
 
 const resultLabelShort = (match) => {
   const kind = getMatchResultKind(match)
-  if (kind === 'none' || kind === 'pending') return '경기 전'
+  if (kind === 'none') return ''
+  if (kind === 'cancelled') return '취소'
+  if (kind === 'pending') return '경기 전'
   if (kind === 'draw') return '무'
   if (kind === 'win') return '승'
   return '패'
+}
+
+const scoreLineForCell = (match) => {
+  if (!match || !isMatchDecided(match)) return null
+  if (
+    typeof match.hanwha_score === 'number' &&
+    typeof match.opponent_score === 'number'
+  ) {
+    return `${match.hanwha_score}:${match.opponent_score}`
+  }
+  return '—'
+}
+
+const pendingStartTimeText = (match) => {
+  if (!match || isMatchDecided(match) || isMatchCancelled(match)) return null
+  const t = match.game_start_time
+  if (typeof t === 'string' && t.trim()) return t.trim()
+  return null
 }
 
 function AttendancePage({ userId }) {
@@ -44,9 +64,8 @@ function AttendancePage({ userId }) {
   const [matches, setMatches] = useState([])
   const [viewMonth, setViewMonth] = useState(localYearMonth)
   const [attendedSet, setAttendedSet] = useState(() => new Set())
-  const [toggleBusy, setToggleBusy] = useState(false)
   const [actionMessage, setActionMessage] = useState('')
-  const [actionIsError, setActionIsError] = useState(false)
+  const savingDateRef = useRef(new Set())
 
   useEffect(() => {
     let cancelled = false
@@ -61,10 +80,9 @@ function AttendancePage({ userId }) {
       setCalendarLoading(true)
       setCalendarError('')
       setActionMessage('')
-      setActionIsError(false)
 
       const matchSelect =
-        'id, game_date, opponent_team, stadium, game_status, hanwha_score, opponent_score, winner_team'
+        'id, game_date, opponent_team, stadium, home_away, game_status, game_start_time, hanwha_score, opponent_score, winner_team'
 
       const [matchRes, attRes] = await Promise.all([
         supabase.from('matches').select(matchSelect).order('game_date', { ascending: false }),
@@ -90,7 +108,6 @@ function AttendancePage({ userId }) {
 
       if (attRes.error) {
         setActionMessage(attRes.error.message)
-        setActionIsError(true)
         setAttendedSet(new Set())
       } else {
         setAttendedSet(new Set((attRes.data ?? []).map((row) => row.attended_at)))
@@ -130,7 +147,7 @@ function AttendancePage({ userId }) {
     for (let day = 1; day <= lastDate; day += 1) {
       const dateText = `${viewMonth}-${String(day).padStart(2, '0')}`
       const match = matchesByDate.get(dateText)
-      const holiday = getKoreanHolidayLabel(dateText)
+      const dayMark = getKoreanDayMark(dateText)
       const dow = weekdayMonFirst(dateText)
       cells.push({
         key: dateText,
@@ -138,7 +155,7 @@ function AttendancePage({ userId }) {
         day,
         dateText,
         match,
-        holiday,
+        dayMark,
         dow,
         isSaturday: dow === 5,
         isSunday: dow === 6,
@@ -147,56 +164,69 @@ function AttendancePage({ userId }) {
     return cells
   }, [viewMonth, matchesByDate])
 
-  const toggleAttendanceForDate = async (dateText) => {
+  const toggleAttendanceForDate = (dateText) => {
     if (!supabase) {
       setActionMessage('Supabase 환경변수가 비어 있어 저장할 수 없습니다.')
-      setActionIsError(true)
       return
     }
-    if (toggleBusy) return
-    setToggleBusy(true)
-    setActionMessage('')
-    setActionIsError(false)
 
     const wasAttended = attendedSet.has(dateText)
+    const match = matchesByDate.get(dateText)
+    /** 경기 행이 없으면 직관 저장 불가. (경기 전·종료 등 `match`가 있으면 가능) 예전에만 저장된 날은 해제만 허용 */
+    if (!match && !wasAttended) return
 
-    try {
-      if (wasAttended) {
-        const { error } = await supabase
-          .from('user_attendance')
-          .delete()
-          .eq('user_id', userId)
-          .eq('attended_at', dateText)
-        if (error) throw error
-        setAttendedSet((prev) => {
-          const next = new Set(prev)
-          next.delete(dateText)
-          return next
-        })
-        setActionMessage('직관일에서 제외했습니다.')
-      } else {
-        const match = matchesByDate.get(dateText)
-        const { error } = await supabase.from('user_attendance').upsert(
-          {
-            user_id: userId,
-            attended_at: dateText,
-            match_id: match?.id ?? null,
-          },
-          { onConflict: 'user_id,attended_at' },
-        )
-        if (error) throw error
-        setAttendedSet((prev) => new Set(prev).add(dateText))
-        setActionMessage('직관일로 저장했습니다.')
-      }
-    } catch (err) {
-      setActionMessage(
-        err?.message ??
-          '저장에 실패했습니다. Supabase에 직관 예정일 마이그레이션이 적용됐는지 확인해 주세요.',
-      )
-      setActionIsError(true)
-    } finally {
-      setToggleBusy(false)
+    if (savingDateRef.current.has(dateText)) return
+    savingDateRef.current.add(dateText)
+
+    if (wasAttended) {
+      setAttendedSet((prev) => {
+        const next = new Set(prev)
+        next.delete(dateText)
+        return next
+      })
+    } else {
+      setAttendedSet((prev) => new Set(prev).add(dateText))
     }
+
+    void (async () => {
+      try {
+        if (wasAttended) {
+          const { error } = await supabase
+            .from('user_attendance')
+            .delete()
+            .eq('user_id', userId)
+            .eq('attended_at', dateText)
+          if (error) throw error
+        } else {
+          const { error } = await supabase.from('user_attendance').upsert(
+            {
+              user_id: userId,
+              attended_at: dateText,
+              match_id: match?.id ?? null,
+            },
+            { onConflict: 'user_id,attended_at' },
+          )
+          if (error) throw error
+        }
+        setActionMessage('')
+      } catch (err) {
+        if (wasAttended) {
+          setAttendedSet((prev) => new Set(prev).add(dateText))
+        } else {
+          setAttendedSet((prev) => {
+            const next = new Set(prev)
+            next.delete(dateText)
+            return next
+          })
+        }
+        setActionMessage(
+          err?.message ??
+            '저장에 실패했습니다. Supabase에 직관 예정일 마이그레이션이 적용됐는지 확인해 주세요.',
+        )
+      } finally {
+        savingDateRef.current.delete(dateText)
+      }
+    })()
   }
 
   useEffect(() => {
@@ -218,7 +248,7 @@ function AttendancePage({ userId }) {
     <section className="card form-card attendance-page">
       <h2>직관일 입력</h2>
       <p className="attendance-intro">
-        달력에서 날짜를 누르면 직관(또는 직관 예정)이 바로 저장되거나 해제됩니다. 같은 날짜를
+        경기가 잡힌 날짜만 직관(또는 직관 예정)으로 저장하거나 해제할 수 있습니다. 같은 날짜를
         다시 누르면 취소됩니다. 좌우 화살표 또는 키보드 방향키(← →)로 달을 옮길 수 있습니다.
       </p>
 
@@ -278,67 +308,126 @@ function AttendancePage({ userId }) {
                   <button
                     key={cell.key}
                     type="button"
-                    disabled={toggleBusy}
                     className={[
                       'calendar-cell',
                       cell.match ? 'calendar-cell--has-match' : 'calendar-cell--no-match',
-                      attendedSet.has(cell.dateText) ? 'calendar-cell--attended' : '',
-                      cell.holiday ? 'calendar-cell--holiday' : '',
+                      cell.match
+                        ? `calendar-cell--result-${getMatchResultKind(cell.match)}`
+                        : isKoreanPublicHolidayMark(cell.dayMark)
+                          ? 'calendar-cell--public-holiday'
+                          : isKoreanNonRedDayMark(cell.dayMark)
+                            ? 'calendar-cell--memorial-day'
+                            : '',
+                      cell.match?.home_away === 'HOME' ? 'calendar-cell--home-game' : '',
+                      cell.match && attendedSet.has(cell.dateText) ? 'calendar-cell--attended' : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
                     onClick={() => toggleAttendanceForDate(cell.dateText)}
                   >
-                    <span
-                      className={[
-                        'calendar-day-number',
-                        cell.holiday ? 'calendar-day-number--holiday' : '',
-                        !cell.holiday && cell.isSaturday ? 'calendar-day-number--sat' : '',
-                        !cell.holiday && cell.isSunday ? 'calendar-day-number--sun' : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      {cell.day}
-                    </span>
-                    <span className="calendar-cell-emblem-wrap" aria-hidden={!cell.match}>
+                    <div className="calendar-cell-head">
+                      <span
+                        className={[
+                          'calendar-day-number',
+                          isKoreanPublicHolidayMark(cell.dayMark)
+                            ? 'calendar-day-number--public-holiday'
+                            : '',
+                          isKoreanNonRedDayMark(cell.dayMark) ? 'calendar-day-number--memorial-day' : '',
+                          !cell.dayMark && cell.isSaturday ? 'calendar-day-number--sat' : '',
+                          !cell.dayMark && cell.isSunday ? 'calendar-day-number--sun' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        {cell.day}
+                      </span>
                       {cell.match ? (
-                        (() => {
-                          const emblemUrl = getOpponentTeamLogoUrl(cell.match.opponent_team)
-                          return emblemUrl ? (
-                            <img
-                              className="calendar-opponent-emblem"
-                              src={emblemUrl}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              onError={(ev) => {
-                                ev.currentTarget.style.display = 'none'
-                              }}
-                            />
-                          ) : (
-                            <span className="calendar-emblem-placeholder" />
-                          )
-                        })()
-                      ) : (
-                        <span className="calendar-emblem-placeholder" />
-                      )}
-                    </span>
-                    <span
-                      className={[
-                        'calendar-result-badge',
-                        cell.match
-                          ? `calendar-result-badge--${getMatchResultKind(cell.match)}`
-                          : 'calendar-result-badge--none',
-                      ].join(' ')}
-                    >
-                      {resultLabelShort(cell.match)}
-                    </span>
-                    {cell.holiday ? (
-                      <span className="calendar-holiday-caption">{cell.holiday}</span>
+                        <div className="calendar-cell-emblem-head">
+                          {(() => {
+                            const emblemUrl = getOpponentTeamLogoUrl(cell.match.opponent_team)
+                            return emblemUrl ? (
+                              <img
+                                className="calendar-opponent-emblem"
+                                src={emblemUrl}
+                                alt=""
+                                loading="lazy"
+                                decoding="async"
+                                onError={(ev) => {
+                                  ev.currentTarget.style.display = 'none'
+                                }}
+                              />
+                            ) : (
+                              <span className="calendar-emblem-placeholder" />
+                            )
+                          })()}
+                          <span
+                            className={[
+                              'calendar-result-under-emblem',
+                              `calendar-result-under-emblem--${getMatchResultKind(cell.match)}`,
+                            ].join(' ')}
+                          >
+                            {resultLabelShort(cell.match)}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+                    {cell.match ? (
+                      <div className="calendar-cell-score-row">
+                        <div className="calendar-cell-score-side">
+                          {(() => {
+                            const scoreText = scoreLineForCell(cell.match)
+                            const timeText = pendingStartTimeText(cell.match)
+                            if (scoreText) {
+                              return (
+                                <span className="calendar-score-line" title="한화 – 상대">
+                                  {scoreText}
+                                </span>
+                              )
+                            }
+                            if (timeText) {
+                              return (
+                                <span className="calendar-game-time calendar-game-time--in-score-row">
+                                  {timeText}
+                                </span>
+                              )
+                            }
+                            return (
+                              <span className="calendar-game-time calendar-game-time--muted">–</span>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="calendar-cell-main-spacer" aria-hidden="true" />
+                    )}
+                    {cell.dayMark ? (
+                      <span
+                        className={[
+                          'calendar-holiday-caption',
+                          isKoreanNonRedDayMark(cell.dayMark) ? 'calendar-holiday-caption--muted' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                      >
+                        {cell.dayMark.caption}
+                      </span>
                     ) : (
                       <span className="calendar-holiday-spacer" />
                     )}
+                    {cell.match && attendedSet.has(cell.dateText) ? (
+                      <span className="calendar-attendance-check" aria-hidden="true">
+                        <svg
+                          className="calendar-attendance-check-svg"
+                          viewBox="0 0 20 20"
+                          focusable="false"
+                        >
+                          <path
+                            className="calendar-attendance-check-path"
+                            d="M4.5 10.35 8.85 14.5 15.5 5.5"
+                          />
+                        </svg>
+                      </span>
+                    ) : null}
                   </button>
                 ),
               )}
@@ -347,9 +436,7 @@ function AttendancePage({ userId }) {
         ) : null}
       </div>
 
-      {actionMessage ? (
-        <p className={actionIsError ? 'error' : 'success'}>{actionMessage}</p>
-      ) : null}
+      {actionMessage ? <p className="error">{actionMessage}</p> : null}
     </section>
   )
 }

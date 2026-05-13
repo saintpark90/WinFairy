@@ -11,6 +11,7 @@ create table if not exists public.matches (
   opponent_score int,
   winner_team text,
   game_status text,
+  game_start_time text,
   source text default 'KBO',
   player_stats jsonb default '[]'::jsonb,
   created_at timestamptz not null default now(),

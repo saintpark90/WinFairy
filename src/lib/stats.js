@@ -23,9 +23,17 @@ const dayBucket = (dateString) => {
   return day === 0 || day === 6 ? '주말' : '평일'
 }
 
+/** 경기 취소·노게임 등(승패·달력의 '경기 전'과 구분). `game_status`는 KBO 일정 비고 등에서 옵니다. */
+export const isMatchCancelled = (match) => {
+  if (!match?.game_status) return false
+  const s = String(match.game_status)
+  return /취소|노게임|무효|제외/.test(s)
+}
+
 /** 승패가 확정된 경기만 집계에 사용합니다. */
 export const isMatchDecided = (match) => {
   if (!match) return false
+  if (isMatchCancelled(match)) return false
   const w = match.winner_team
   if (w != null && String(w).trim() !== '') return true
   if (
@@ -58,9 +66,10 @@ export const isHanwhaWin = (match) => {
 const isHanwhaLoss = (match) =>
   isMatchDecided(match) && !isHanwhaWin(match) && !isDraw(match)
 
-/** 달력·뱃지용: `none`은 경기 행 없음(직관 예정만). */
+/** 달력·뱃지용: `none`은 경기 행 없음(직관 예정만). `cancelled`는 취소·노게임 등. */
 export const getMatchResultKind = (match) => {
   if (!match) return 'none'
+  if (isMatchCancelled(match)) return 'cancelled'
   if (!isMatchDecided(match)) return 'pending'
   if (isDraw(match)) return 'draw'
   if (isHanwhaWin(match)) return 'win'
@@ -159,6 +168,15 @@ const buildOpponentRows = (records) => {
   return sortRowsByWinRateDesc([...ordered, ...extras])
 }
 
+const toNumOrNull = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
 const buildTopPlayers = (records, type) => {
   const stats = new Map()
   records.forEach((record) => {
@@ -174,21 +192,50 @@ const buildTopPlayers = (records, type) => {
           {
             playerName: key,
             games: 0,
+            warTotal: 0,
+            warSamples: 0,
             avgTotal: 0,
             battingAvgSamples: 0,
+            opsTotal: 0,
+            opsSamples: 0,
+            hits: 0,
+            homeRuns: 0,
             eraTotal: 0,
             eraSamples: 0,
+            wins: 0,
+            holds: 0,
+            saves: 0,
           }
 
         current.games += 1
+        const war = toNumOrNull(player.war)
+        if (war != null) {
+          current.warTotal += war
+          current.warSamples += 1
+        }
         if (typeof player.batting_avg === 'number') {
           current.avgTotal += player.batting_avg
           current.battingAvgSamples += 1
         }
+        const ops = toNumOrNull(player.ops)
+        if (ops != null) {
+          current.opsTotal += ops
+          current.opsSamples += 1
+        }
+        const hits = toNumOrNull(player.hits)
+        if (hits != null) current.hits += hits
+        const hr = toNumOrNull(player.home_runs)
+        if (hr != null) current.homeRuns += hr
         if (typeof player.era === 'number') {
           current.eraTotal += player.era
           current.eraSamples += 1
         }
+        const wins = toNumOrNull(player.wins)
+        if (wins != null) current.wins += wins
+        const holds = toNumOrNull(player.holds)
+        if (holds != null) current.holds += holds
+        const saves = toNumOrNull(player.saves)
+        if (saves != null) current.saves += saves
         stats.set(key, current)
       })
   })
@@ -196,32 +243,31 @@ const buildTopPlayers = (records, type) => {
   return [...stats.values()]
     .map((player) => ({
       ...player,
+      war:
+        player.warSamples > 0 ? Number((player.warTotal / player.warSamples).toFixed(2)) : null,
       battingAvg:
         player.battingAvgSamples > 0
           ? Number((player.avgTotal / player.battingAvgSamples).toFixed(3))
           : null,
+      ops:
+        player.opsSamples > 0 ? Number((player.opsTotal / player.opsSamples).toFixed(3)) : null,
       era:
         player.eraSamples > 0
           ? Number((player.eraTotal / player.eraSamples).toFixed(2))
           : null,
     }))
     .sort((a, b) => {
+      const aWar = a.war ?? -Infinity
+      const bWar = b.war ?? -Infinity
+      if (aWar !== bWar) return bWar - aWar
       if (type === 'pitcher') {
-        if (a.era != null && b.era != null) {
-          return a.era - b.era
-        }
-        if (a.era != null) return -1
-        if (b.era != null) return 1
-        return b.games - a.games
-      }
-      if (a.battingAvg != null && b.battingAvg != null) {
-        if (a.battingAvg !== b.battingAvg) {
-          return b.battingAvg - a.battingAvg
-        }
-      } else if (a.battingAvg != null) {
-        return -1
-      } else if (b.battingAvg != null) {
-        return 1
+        const aEra = a.era ?? Infinity
+        const bEra = b.era ?? Infinity
+        if (aEra !== bEra) return aEra - bEra
+      } else {
+        const aOps = a.ops ?? -Infinity
+        const bOps = b.ops ?? -Infinity
+        if (aOps !== bOps) return bOps - aOps
       }
       return b.games - a.games
     })
@@ -249,7 +295,11 @@ export const buildDashboardStats = (attendanceRecords) => {
       winRate,
     },
     byStadium: buildStadiumRows(attendanceRecords),
-    byHomeAway: buildGroupRows(attendanceRecords, (row) => row.match.home_away || '미상'),
+    byHomeAway: buildGroupRows(attendanceRecords, (row) => {
+      if (row.match.home_away === 'AWAY') return '원정경기'
+      if (row.match.home_away === 'HOME') return '홈경기'
+      return '미상'
+    }),
     byWeekType: buildGroupRows(attendanceRecords, (row) =>
       dayBucket(row.match?.game_date || row.attended_at),
     ),

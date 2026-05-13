@@ -1,8 +1,9 @@
-name: Sync KBO Regular Season Results
+name: Sync KBO schedule (Schedule.aspx)
 
 on:
   schedule:
-    - cron: '10 16 * * *'
+    # 매일 한국시간 새벽 2시 (KST = UTC+9 → 전날 17:00 UTC)
+    - cron: '0 17 * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,7 +21,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r scripts/requirements.txt
 
-      - name: Sync results to Supabase
+      - name: Sync schedule to Supabase
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
