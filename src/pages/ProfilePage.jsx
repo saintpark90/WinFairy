@@ -1,8 +1,43 @@
+import { useState } from 'react'
 import { getUserDisplayFields } from '../lib/userDisplay'
+import { supabase } from '../lib/supabase'
 
-function ProfilePage({ user }) {
+function ProfilePage({ user, onAccountDeleted }) {
   const { displayName, avatarUrl } = getUserDisplayFields(user)
   const email = user?.email ?? ''
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  const handleDeleteAccount = async () => {
+    const firstOk = window.confirm(
+      '계정을 삭제하시겠습니까?\n\n직관 기록·프로필 등 내 모든 데이터가 영구 삭제되며 복구할 수 없습니다.',
+    )
+    if (!firstOk) return
+
+    const secondOk = window.confirm(
+      '정말 삭제할까요?\n\n마지막 확인입니다. 확인을 누르면 즉시 삭제되며 되돌릴 수 없습니다.',
+    )
+    if (!secondOk) return
+
+    if (!supabase) {
+      window.alert('데이터베이스에 연결되어 있지 않아 계정을 삭제할 수 없습니다.')
+      return
+    }
+
+    setDeleting(true)
+    setDeleteError('')
+    const { error } = await supabase.rpc('delete_own_account')
+    setDeleting(false)
+
+    if (error) {
+      setDeleteError(error.message)
+      return
+    }
+
+    if (onAccountDeleted) {
+      await onAccountDeleted()
+    }
+  }
 
   return (
     <div className="dashboard">
@@ -30,6 +65,25 @@ function ProfilePage({ user }) {
               </p>
             ) : null}
           </div>
+        </div>
+
+        <div className="profile-delete-section">
+          <p className="profile-delete-hint muted">
+            ※ 계정을 삭제하면 복구가 불가능합니다.
+          </p>
+          <button
+            type="button"
+            className="profile-delete-account-button"
+            disabled={deleting}
+            onClick={handleDeleteAccount}
+          >
+            {deleting ? '삭제 중…' : '계정 삭제'}
+          </button>
+          {deleteError ? (
+            <p className="error profile-delete-error" role="alert">
+              {deleteError}
+            </p>
+          ) : null}
         </div>
       </section>
     </div>

@@ -146,6 +146,44 @@ span.profile-avatar-large.user-avatar-fallback {
   color: #4b5563;
 }
 
+.profile-delete-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.profile-delete-hint {
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  padding-bottom: 10px;
+}
+
+.profile-delete-account-button {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-delete-account-button:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.profile-delete-account-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.profile-delete-error {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+}
+
 .nav-link {
   text-decoration: none;
   color: #374151;
@@ -161,11 +199,21 @@ span.profile-avatar-large.user-avatar-fallback {
 
 .content {
   margin-top: 16px;
+  /* Grid 자식의 min-content 너비(넓은 표 등)가 뷰포트를 밀어 카드가 옆으로 잘리는 것 방지 */
+  min-width: 0;
 }
 
 .dashboard {
   display: grid;
   gap: 12px;
+  min-width: 0;
+}
+
+/* 대시보드·히어로·TOP5 2열 그리드: 아이템이 부모 폭을 넘지 않도록 */
+.dashboard > *,
+.dashboard-hero-row > *,
+.grid2 > * {
+  min-width: 0;
 }
 
 .hero-card,
@@ -214,13 +262,15 @@ span.profile-avatar-large.user-avatar-fallback {
 
 .recent-game-line {
   display: grid;
-  grid-template-columns: 5.25rem 6rem minmax(0, 1fr) 8.5rem 3.5rem 3rem;
+  /* 경기장은 최소 폭 보장 — minmax(0,1fr)만 두면 카드가 좁을 때 열이 0으로 수축해 짤림 */
+  grid-template-columns: 5.25rem 6rem minmax(5.5rem, 1fr) 8.5rem 3.5rem 3rem;
   gap: 8px 10px;
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid #e5e7eb;
   font-size: 0.875rem;
-  min-width: min(100%, 28rem);
+  /* min(100%,28rem)이면 좁은 카드에서 행이 100%로만 잡혀 고정 컬럼이 fr을 밀어냄 → 가로 스크롤로 전체 유지 */
+  min-width: 28rem;
 }
 
 .recent-games-list .recent-game-line:last-child {
@@ -401,6 +451,11 @@ td.stat-rank-col {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+.dashboard-stadium-left > *,
+.dashboard-stadium-right > * {
+  min-width: 0;
 }
 
 .dashboard-stadium-right {
@@ -1138,6 +1193,12 @@ button {
 .team-stats-page {
   display: grid;
   gap: 12px;
+  /* 넓은 표(nowrap 컬럼) 때문에 페이지 전체가 가로로 밀려 잘리는 것 방지 */
+  min-width: 0;
+}
+
+.team-stats-page > * {
+  min-width: 0;
 }
 
 .team-stats-hero {
@@ -1163,6 +1224,30 @@ button {
   text-align: center;
   vertical-align: middle;
   white-space: nowrap;
+}
+
+.team-stats-compare-table thead th:first-child,
+.team-stats-compare-table tbody th[scope='row'] {
+  text-align: left;
+  font-weight: 600;
+}
+
+.team-stats-row-mine {
+  background: #fffbeb;
+}
+
+.team-stats-row-all {
+  background: #f8fafc;
+}
+
+.team-stats-legend-mine {
+  font-weight: 600;
+  color: #b45309;
+}
+
+.team-stats-legend-all {
+  font-weight: 600;
+  color: #475569;
 }
 
 .team-stats-history th:nth-child(2),
@@ -1196,17 +1281,67 @@ button {
     flex: initial;
   }
 
+  .app-shell {
+    padding: 12px;
+  }
+
   .app-top-bar {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .app-top-bar-brand {
+    text-align: center;
+  }
+
+  .app-top-bar .logo {
+    margin: 0;
+    font-size: clamp(1.65rem, 5.5vw, 2.1rem);
+    line-height: 1.15;
   }
 
   .app-main-nav {
-    justify-content: flex-start;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    flex: initial;
+    min-width: 0;
+    width: 100%;
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  .app-main-nav .nav-link,
+  .app-main-nav .nav-link-logout {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 6px;
+    font-size: clamp(0.75rem, 2.6vw, 0.8125rem);
+    line-height: 1.25;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    word-break: keep-all;
   }
 
   .attendance-page .calendar-cell {
     min-height: 92px;
     padding: 5px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-main-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-main-nav .nav-link,
+  .app-main-nav .nav-link-logout {
+    font-size: 0.78rem;
+    padding: 8px 5px;
   }
 }

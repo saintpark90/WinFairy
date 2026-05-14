@@ -252,7 +252,7 @@ function App() {
             path="/attendance"
             element={<AttendancePage userId={session.user.id} />}
           />
-          <Route path="/profile" element={<ProfilePage user={session.user} />} />
+          <Route path="/profile" element={<ProfilePage user={session.user} onAccountDeleted={signOut} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

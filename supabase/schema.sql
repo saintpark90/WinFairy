@@ -187,6 +187,27 @@ $$;
 revoke all on function public.get_attendance_leaderboard() from public;
 grant execute on function public.get_attendance_leaderboard() to authenticated;
 
+-- 본인 계정 삭제 (직관·프로필 등은 auth.users FK ON DELETE CASCADE)
+create or replace function public.delete_own_account()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+begin
+  if uid is null then
+    raise exception 'not authenticated';
+  end if;
+
+  delete from auth.users where id = uid;
+end;
+$$;
+
+revoke all on function public.delete_own_account() from public;
+grant execute on function public.delete_own_account() to authenticated;
+
 -- 기존 직관만 있고 profiles가 없던 경우(선택): 아래 한 번 실행
 -- insert into public.profiles (id)
 -- select distinct ua.user_id from public.user_attendance ua
