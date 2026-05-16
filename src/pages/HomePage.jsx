@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import {
   buildDashboardStats,
+  formatInningsFromOuts,
   getMatchResultKind,
   isMatchCancelled,
 } from '../lib/stats'
@@ -50,16 +51,16 @@ const getWinRateComment = (winRate, totalGames, userDisplayName) => {
     return '누구보다 슬프시겠어요! 😭\n하지만 통계적으로 이제 올라갈 일만 남았다는 사실! 기적의 반등을 믿어봅시다. 화이팅!'
   }
   if (winRate < 30) {
-    return `이 정도면 직관 가는 날이 곧 수행의 날이겠네요. 🙏\n진정한 팬심이 아니고선 버틸 수 없는 승률입니다. ${userDisplayName}님이 진정한 보살팬!`
+    return `이 정도면 직관 가는 날이 곧 수행의 날이겠네요. 🙏\n진정한 팬심이 아니고선 버틸 수 없는 승률입니다.\n ${userDisplayName}님이 진정한 보살팬!`
   }
   if (winRate < 40) {
-    return '가끔 이기는 그 짜릿함 때문에 포기를 못 하시죠? 🎢\n조만간 연승 요정으로 진화하실 기운이 느껴집니다! 아자아자!'
+    return '가끔 이기는 그 짜릿함 때문에 포기를 못 하시죠? 🎢\n조만간 연승 요정으로 진화하실 기운이 느껴집니다! \n아자아자!'
   }
   if (winRate < 50) {
     return "딱 평균 직전! 턱걸이 중입니다. 🧗‍♂️\n다음 경기 결과에 따라 '5할 승률'의 고지가 머지않았어요!"
   }
   if (winRate < 60) {
-    return `완벽한 균형, 황금 밸런스! ⚖️\n${userDisplayName}님이 가는 날은 그야말로 '엄마가 좋아 아빠가 좋아'급 박빙의 승부가 펼쳐지겠군요.`
+    return `완벽한 균형, 황금 밸런스! ⚖️\n${userDisplayName}님이 가는 날은 그야말로 \n'엄마가 좋아 아빠가 좋아'급 박빙의 승부가 펼쳐지겠군요.`
   }
   if (winRate < 70) {
     return "오! 슬슬 '승리요정'의 날개가 돋아나고 있어요. 🧚‍♀️\n주변 친구들에게 나 승요라고 자랑하셔도 되겠는데요?"
@@ -101,12 +102,24 @@ const WarInfoHeader = () => (
   </span>
 )
 
+const formatOpponentRuns = (row) =>
+  row.scoredGames > 0 ? row.runsScored : '-'
+
+const formatOpponentRunsAllowed = (row) =>
+  row.scoredGames > 0 ? row.runsAllowed : '-'
+
+const formatOpponentAvgRuns = (total, scoredGames) => {
+  if (!scoredGames) return '-'
+  return (total / scoredGames).toFixed(1)
+}
+
 const StatSection = ({
   title,
   rows,
   showTeamLogoInLabel = false,
   sectionClassName = '',
   showRank = false,
+  showRunsColumns = false,
 }) => (
   <section className={['card', sectionClassName].filter(Boolean).join(' ')}>
     <h3>{title}</h3>
@@ -118,7 +131,17 @@ const StatSection = ({
             <th>구분</th>
             <th>경기</th>
             <th>승</th>
+            <th>패</th>
+            <th>무</th>
             <th>승률</th>
+            {showRunsColumns ? (
+              <>
+                <th>득점</th>
+                <th>실점</th>
+                <th>평균득점</th>
+                <th>평균실점</th>
+              </>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -150,7 +173,17 @@ const StatSection = ({
                 </td>
                 <td>{row.total}</td>
                 <td>{row.wins}</td>
+                <td>{row.losses ?? 0}</td>
+                <td>{row.draws ?? 0}</td>
                 <td>{row.winRate}%</td>
+                {showRunsColumns ? (
+                  <>
+                    <td>{formatOpponentRuns(row)}</td>
+                    <td>{formatOpponentRunsAllowed(row)}</td>
+                    <td>{formatOpponentAvgRuns(row.runsScored, row.scoredGames)}</td>
+                    <td>{formatOpponentAvgRuns(row.runsAllowed, row.scoredGames)}</td>
+                  </>
+                ) : null}
               </tr>
             )
           })}
@@ -221,8 +254,8 @@ function HomePage({ userId, userDisplayName }) {
     [stats.summary.totalGames, stats.summary.winRate, userDisplayName],
   )
 
-  /** 직관 + 스코어 확정(한화·상대 점수 숫자)만, 경기일 최신순 최대 3경기 */
-  const recentThreeGames = useMemo(() => {
+  /** 직관 + 스코어 확정(한화·상대 점수 숫자)만, 경기일 최신순 최대 5경기 */
+  const recentFiveGames = useMemo(() => {
     const withScoredMatch = attendanceRecords.filter(
       (r) => r.match && hasRecordedScore(r.match),
     )
@@ -238,7 +271,7 @@ function HomePage({ userId, userDisplayName }) {
       if (seenDates.has(d)) continue
       seenDates.add(d)
       out.push(r.match)
-      if (out.length >= 3) break
+      if (out.length >= 5) break
     }
     return out
   }, [attendanceRecords])
@@ -268,8 +301,8 @@ function HomePage({ userId, userDisplayName }) {
               <p className="win-rate-comment">{winRateComment}</p>
             </section>
             <section className="card recent-games-card">
-              <h3 className="recent-games-title">직관 최근 3경기</h3>
-              {recentThreeGames.length ? (
+              <h3 className="recent-games-title">직관 최근 5경기</h3>
+              {recentFiveGames.length ? (
                 <div className="recent-games-scroll">
                   <div
                     className="recent-game-line recent-game-line--header"
@@ -278,9 +311,7 @@ function HomePage({ userId, userDisplayName }) {
                     <span className="recent-game-colhead">날짜</span>
                     <span className="recent-game-colhead">경기시간</span>
                     <span className="recent-game-colhead">경기장</span>
-                    <span className="recent-game-colhead recent-game-colhead--center">
-                      상대
-                    </span>
+                    <span className="recent-game-colhead">상대</span>
                     <span className="recent-game-colhead recent-game-colhead--center">
                       스코어
                     </span>
@@ -289,7 +320,7 @@ function HomePage({ userId, userDisplayName }) {
                     </span>
                   </div>
                   <ul className="recent-games-list">
-                  {recentThreeGames.map((m) => {
+                  {recentFiveGames.map((m) => {
                     const logoUrl = getOpponentTeamLogoUrl(m.opponent_team)
                     const timeText =
                       typeof m.game_start_time === 'string' && m.game_start_time.trim()
@@ -303,7 +334,10 @@ function HomePage({ userId, userDisplayName }) {
                         <span className="recent-game-stadium" title={m.stadium ?? ''}>
                           {m.stadium ?? '–'}
                         </span>
-                        <span className="recent-game-logo-wrap">
+                        <span
+                          className="recent-game-opponent"
+                          title={m.opponent_team ?? ''}
+                        >
                           {logoUrl ? (
                             <img
                               className="recent-game-logo"
@@ -318,6 +352,9 @@ function HomePage({ userId, userDisplayName }) {
                           ) : (
                             <span className="recent-game-logo-fallback" aria-hidden="true" />
                           )}
+                          <span className="recent-game-opponent-name">
+                            {m.opponent_team ?? '–'}
+                          </span>
                         </span>
                         <span className="recent-game-score">{recentGameScoreText(m)}</span>
                         <span
@@ -354,7 +391,7 @@ function HomePage({ userId, userDisplayName }) {
             <div className="dashboard-stadium-right">
               <StatSection title="홈 / 원정 승률" rows={stats.byHomeAway} showRank />
               <StatSection
-                title="평일 / 주말 승률"
+                title="평일 / 주말(공휴일) 승률"
                 rows={stats.byWeekType}
                 sectionClassName="stat-card-weekstretch"
                 showRank
@@ -366,6 +403,7 @@ function HomePage({ userId, userDisplayName }) {
             rows={stats.byOpponent}
             showTeamLogoInLabel
             showRank
+            showRunsColumns
           />
 
           <section className="card grid2">
@@ -387,6 +425,8 @@ function HomePage({ userId, userDisplayName }) {
                         <th>타율</th>
                         <th>안타</th>
                         <th>홈런</th>
+                        <th>타점</th>
+                        <th>득점</th>
                         <th>OPS</th>
                       </tr>
                     </thead>
@@ -399,6 +439,8 @@ function HomePage({ userId, userDisplayName }) {
                           <td>{formatStatValue(player.battingAvg)}</td>
                           <td>{player.hits ?? 0}</td>
                           <td>{player.homeRuns ?? 0}</td>
+                          <td>{player.rbi ?? 0}</td>
+                          <td>{player.runs ?? 0}</td>
                           <td>{formatStatValue(player.ops)}</td>
                         </tr>
                       ))}
@@ -425,6 +467,8 @@ function HomePage({ userId, userDisplayName }) {
                           <WarInfoHeader />
                         </th>
                         <th>ERA</th>
+                        <th>이닝</th>
+                        <th>탈삼진</th>
                         <th>승리</th>
                         <th>홀드</th>
                         <th>세이브</th>
@@ -437,6 +481,8 @@ function HomePage({ userId, userDisplayName }) {
                           <td className="top5-player-name">{player.playerName}</td>
                           <td>{formatStatValue(player.war)}</td>
                           <td>{formatStatValue(player.era, 2)}</td>
+                          <td>{formatInningsFromOuts(player.inningsOuts)}</td>
+                          <td>{player.strikeouts ?? 0}</td>
                           <td>{player.wins ?? 0}</td>
                           <td>{player.holds ?? 0}</td>
                           <td>{player.saves ?? 0}</td>

@@ -6,9 +6,10 @@
  * @typedef {'public' | 'both' | 'national' | 'memorial' | 'observance'} KoreanDayMarkKind
  * - public: 법정 공휴일(관공서의 공휴일에 관한 규정)
  * - both: 법정 공휴일이면서 국경일법상 국경일(삼일절·광복절·개천절·한글날)
- * - national: 국경일이나 해당일은 공휴일이 아님(제헌절)
- * - memorial: 국경일도 아닌 국가기념·추모일(6·25 전쟁일 등) — 빨간날(공휴일) 스타일 없음
- * - observance: 국제·관습 기념일(노동절 등) — 법정 공휴일 아님, 빨간날 스타일 없음
+ * - national: 국경일이나 법정 공휴일은 아님(달력 빨간날 아님)
+ * - memorial: 국경일도 아닌 국가기념·추모일(6·25 전쟁일 등) — 빨간날 스타일 없음
+ * - observance: 달력에만 표기하는 기타 기념일 — 빨간날 스타일 없음
+ * 제헌절(7·17)·노동절(5·1)은 public(빨간날·공휴일)로 표기합니다.
  */
 
 /** @type {Record<string, { kind: KoreanDayMarkKind, label: string }>} */
@@ -19,12 +20,12 @@ const KOREAN_DAY_MARKS = {
   '2025-01-30': { kind: 'public', label: '설날' },
   '2025-03-01': { kind: 'both', label: '삼일절' },
   '2025-03-03': { kind: 'public', label: '대체공휴일' },
-  '2025-05-01': { kind: 'observance', label: '노동절' },
+  '2025-05-01': { kind: 'public', label: '노동절' },
   '2025-05-05': { kind: 'public', label: '어린이날·부처님오신날' },
   '2025-05-06': { kind: 'public', label: '대체공휴일' },
   '2025-06-06': { kind: 'public', label: '현충일' },
   '2025-06-25': { kind: 'memorial', label: '6·25 전쟁일' },
-  '2025-07-17': { kind: 'public', label: '제헌절' },
+  '2025-07-17': { kind: 'both', label: '제헌절' },
   '2025-08-15': { kind: 'both', label: '광복절' },
   '2025-10-03': { kind: 'both', label: '개천절' },
   '2025-10-05': { kind: 'public', label: '추석' },
@@ -40,13 +41,13 @@ const KOREAN_DAY_MARKS = {
   '2026-02-18': { kind: 'public', label: '설날' },
   '2026-03-01': { kind: 'both', label: '삼일절' },
   '2026-03-02': { kind: 'public', label: '대체공휴일' },
-  '2026-05-01': { kind: 'observance', label: '노동절' },
+  '2026-05-01': { kind: 'public', label: '노동절' },
   '2026-05-05': { kind: 'public', label: '어린이날' },
   '2026-05-24': { kind: 'public', label: '부처님오신날' },
   '2026-05-25': { kind: 'public', label: '대체공휴일' },
   '2026-06-06': { kind: 'public', label: '현충일' },
   '2026-06-25': { kind: 'memorial', label: '6·25 전쟁일' },
-  '2026-07-17': { kind: 'public', label: '제헌절' },
+  '2026-07-17': { kind: 'both', label: '제헌절' },
   '2026-08-15': { kind: 'both', label: '광복절' },
   '2026-08-17': { kind: 'public', label: '대체공휴일' },
   '2026-09-24': { kind: 'public', label: '추석' },
@@ -64,13 +65,13 @@ const KOREAN_DAY_MARKS = {
   '2027-02-08': { kind: 'public', label: '설날' },
   '2027-02-09': { kind: 'public', label: '대체공휴일' },
   '2027-03-01': { kind: 'both', label: '삼일절' },
-  '2027-05-01': { kind: 'observance', label: '노동절' },
+  '2027-05-01': { kind: 'public', label: '노동절' },
   '2027-05-05': { kind: 'public', label: '어린이날' },
   '2027-05-13': { kind: 'public', label: '부처님오신날' },
   '2027-05-14': { kind: 'public', label: '대체공휴일' },
   '2027-06-06': { kind: 'public', label: '현충일' },
   '2027-06-25': { kind: 'memorial', label: '6·25 전쟁일' },
-  '2027-07-17': { kind: 'public', label: '제헌절' },
+  '2027-07-17': { kind: 'both', label: '제헌절' },
   '2027-08-15': { kind: 'both', label: '광복절' },
   '2027-08-16': { kind: 'public', label: '대체공휴일' },
   '2027-09-14': { kind: 'public', label: '추석' },
@@ -119,7 +120,7 @@ export function isKoreanPublicHolidayMark(mark) {
   return mark?.kind === 'public' || mark?.kind === 'both'
 }
 
-/** 국경일(공휴일 아님)·기념일·노동절 등 — 빨간날이 아닌 구분 스타일용 */
+/** 국경일(공휴일 아님)·기념일 등 — 빨간날이 아닌 구분 스타일용 */
 export function isKoreanNonRedDayMark(mark) {
   return (
     mark?.kind === 'national' || mark?.kind === 'memorial' || mark?.kind === 'observance'

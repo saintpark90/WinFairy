@@ -256,21 +256,29 @@ span.profile-avatar-large.user-avatar-fallback {
 }
 
 .recent-games-scroll {
-  overflow-x: auto;
-  margin: 0 -2px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .recent-game-line {
   display: grid;
-  /* 경기장은 최소 폭 보장 — minmax(0,1fr)만 두면 카드가 좁을 때 열이 0으로 수축해 짤림 */
-  grid-template-columns: 5.25rem 6rem minmax(5.5rem, 1fr) 8.5rem 3.5rem 3rem;
-  gap: 8px 10px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  /* 카드 폭 안에 맞춤 — 경기장 열은 상한만 두고 말줄임(1fr로 늘리지 않음) */
+  grid-template-columns:
+    minmax(0, 4.75rem)
+    minmax(0, 4.25rem)
+    minmax(2.25rem, 5.25rem)
+    minmax(0, 3.5rem)
+    minmax(0, 3.75rem)
+    minmax(0, 3.5rem);
+  gap: 6px 20px;
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 0.875rem;
-  /* min(100%,28rem)이면 좁은 카드에서 행이 100%로만 잡혀 고정 컬럼이 fr을 밀어냄 → 가로 스크롤로 전체 유지 */
-  min-width: 28rem;
+  font-size: 0.9125rem;
+  text-align: center;
 }
 
 .recent-games-list .recent-game-line:last-child {
@@ -281,13 +289,26 @@ span.profile-avatar-large.user-avatar-fallback {
   padding: 6px 0 10px;
   margin-bottom: 2px;
   border-bottom: 2px solid #d1d5db;
-  font-size: 0.7rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #6b7280;
   letter-spacing: -0.02em;
+  text-align: center;
 }
 
 .recent-game-colhead {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-game-date,
+.recent-game-time,
+.recent-game-stadium,
+.recent-game-opponent,
+.recent-game-score,
+.recent-game-result {
   min-width: 0;
 }
 
@@ -314,23 +335,39 @@ span.profile-avatar-large.user-avatar-fallback {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
-.recent-game-logo-wrap {
-  display: flex;
-  justify-content: center;
+.recent-game-opponent {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .recent-game-logo {
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .recent-game-logo-fallback {
   display: block;
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.recent-game-opponent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.2;
 }
 
 .recent-game-score {
@@ -338,29 +375,30 @@ span.profile-avatar-large.user-avatar-fallback {
   font-variant-numeric: tabular-nums;
   text-align: center;
   color: #111827;
-  font-size: 18px;
+  font-size: 0.9375rem;
 }
 
 .recent-game-result {
-  font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   text-align: center;
-  padding: 3px 6px;
+  padding: 2px 4px;
   border-radius: 6px;
   justify-self: end;
-  font-size: 18px;
-  margin-right: 8px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .recent-game-result--win {
   background: #dcfce7;
   color: #166534;
+  margin-right: 15px;
 }
 
 .recent-game-result--loss {
   background: #ffedd5;
   color: #9a3412;
+  margin-right: 15px;
 }
 
 .recent-game-result--draw {
@@ -389,7 +427,7 @@ span.profile-avatar-large.user-avatar-fallback {
 }
 
 .big-number {
-  font-size: 2.4rem;
+  font-size: 3.4rem;
   font-weight: 700;
   margin: 8px 0;
   color: #ea580c;

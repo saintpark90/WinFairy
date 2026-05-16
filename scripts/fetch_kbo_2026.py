@@ -310,6 +310,12 @@ def _extract_hanwha_hitter_stats(
     if not player_name:
       continue
 
+    runs = 0
+    if len(row1) >= 4:
+      parsed_runs = parse_int(_clean_cell_text(row1[3].get("Text")))
+      if parsed_runs is not None:
+        runs = parsed_runs
+
     # table3: [타수, 안타, 타점, 볼넷, 타율] 구조
     at_bats = parse_int(_clean_cell_text(row3[0].get("Text")))
     hits = parse_int(_clean_cell_text(row3[1].get("Text")))
@@ -348,6 +354,7 @@ def _extract_hanwha_hitter_stats(
         "triples": triples,
         "home_runs": home_runs,
         "rbi": rbi if rbi is not None else 0,
+        "runs": runs,
         "walks": walks if walks is not None else 0,
         "ops": None,
       }

@@ -1,3 +1,5 @@
+import { getKoreanDayMark, isKoreanPublicHolidayMark } from './koreanHolidays'
+
 const HANWHA_NAME = '한화'
 
 /** KBO 일정 `S_NM` 기준 구단 홈 구장 9곳. 직관이 없어도 0경기로 표시합니다. */
@@ -18,9 +20,15 @@ const pct = (wins, total) => {
   return Number(((wins / total) * 100).toFixed(1))
 }
 
+/** 직관일 입력 달력의 빨간날(법정 공휴일·공휴 겸 국경일)과 동일 기준으로 주말(공휴일) 집계 */
 const dayBucket = (dateString) => {
-  const day = new Date(`${dateString}T12:00:00`).getDay()
-  return day === 0 || day === 6 ? '주말' : '평일'
+  if (!dateString) return '평일'
+  const iso = String(dateString).slice(0, 10)
+  const day = new Date(`${iso}T12:00:00`).getDay()
+  const isWeekend = day === 0 || day === 6
+  const isPublicHoliday = isKoreanPublicHolidayMark(getKoreanDayMark(iso))
+  if (isWeekend || isPublicHoliday) return '주말(공휴일)'
+  return '평일'
 }
 
 /** 경기 취소·노게임 등(승패·달력의 '경기 전'과 구분). `game_status`는 KBO 일정 비고 등에서 옵니다. */
@@ -92,9 +100,11 @@ const buildGroupRows = (records, keySelector) => {
   records.forEach((record) => {
     if (!record.match || !isMatchDecided(record.match)) return
     const key = keySelector(record)
-    const current = bucket.get(key) ?? { label: key, total: 0, wins: 0 }
+    const current = bucket.get(key) ?? { label: key, total: 0, wins: 0, losses: 0, draws: 0 }
     current.total += 1
-    current.wins += isHanwhaWin(record.match) ? 1 : 0
+    if (isHanwhaWin(record.match)) current.wins += 1
+    else if (isHanwhaLoss(record.match)) current.losses += 1
+    else if (isDraw(record.match)) current.draws += 1
     bucket.set(key, current)
   })
 
@@ -110,9 +120,11 @@ const buildStadiumRows = (records) => {
   records.forEach((record) => {
     if (!record.match || !isMatchDecided(record.match)) return
     const key = record.match.stadium || '미상'
-    const current = bucket.get(key) ?? { label: key, total: 0, wins: 0 }
+    const current = bucket.get(key) ?? { label: key, total: 0, wins: 0, losses: 0, draws: 0 }
     current.total += 1
-    current.wins += isHanwhaWin(record.match) ? 1 : 0
+    if (isHanwhaWin(record.match)) current.wins += 1
+    else if (isHanwhaLoss(record.match)) current.losses += 1
+    else if (isDraw(record.match)) current.draws += 1
     bucket.set(key, current)
   })
 
@@ -128,7 +140,7 @@ const buildStadiumRows = (records) => {
       dataMap.delete(name)
       return existing
     }
-    return { label: name, total: 0, wins: 0, winRate: 0 }
+    return { label: name, total: 0, wins: 0, losses: 0, draws: 0, winRate: 0 }
   })
 
   const extras = [...dataMap.values()]
@@ -138,14 +150,40 @@ const buildStadiumRows = (records) => {
 /** `matches.opponent_team` 짧은 이름(`fetch_kbo_2026.py`의 TEAM_ID_TO_NAME). 한화 제외 9구단. */
 const KBO_OPPONENT_ORDER = ['LG', '두산', 'KIA', '롯데', '삼성', '키움', 'SSG', 'KT', 'NC']
 
+const addMatchRunsToOpponentRow = (row, match) => {
+  if (
+    typeof match.hanwha_score !== 'number' ||
+    typeof match.opponent_score !== 'number'
+  ) {
+    return
+  }
+  row.runsScored += match.hanwha_score
+  row.runsAllowed += match.opponent_score
+  row.scoredGames += 1
+}
+
+const emptyOpponentRow = (label) => ({
+  label,
+  total: 0,
+  wins: 0,
+  losses: 0,
+  draws: 0,
+  runsScored: 0,
+  runsAllowed: 0,
+  scoredGames: 0,
+})
+
 const buildOpponentRows = (records) => {
   const bucket = new Map()
   records.forEach((record) => {
     if (!record.match || !isMatchDecided(record.match)) return
     const key = (record.match.opponent_team || '미상').trim()
-    const current = bucket.get(key) ?? { label: key, total: 0, wins: 0 }
+    const current = bucket.get(key) ?? emptyOpponentRow(key)
     current.total += 1
-    current.wins += isHanwhaWin(record.match) ? 1 : 0
+    if (isHanwhaWin(record.match)) current.wins += 1
+    else if (isHanwhaLoss(record.match)) current.losses += 1
+    else if (isDraw(record.match)) current.draws += 1
+    addMatchRunsToOpponentRow(current, record.match)
     bucket.set(key, current)
   })
 
@@ -161,7 +199,7 @@ const buildOpponentRows = (records) => {
       dataMap.delete(name)
       return existing
     }
-    return { label: name, total: 0, wins: 0, winRate: 0 }
+    return { ...emptyOpponentRow(name), winRate: 0 }
   })
 
   const extras = [...dataMap.values()]
@@ -175,6 +213,15 @@ const toNumOrNull = (value) => {
     return Number.isFinite(n) ? n : null
   }
   return null
+}
+
+/** 투수 이닝: 이닝 아웃카운트 합 → 야구 표기 (예: 5.1) */
+export const formatInningsFromOuts = (outs) => {
+  if (outs == null || !Number.isFinite(outs) || outs <= 0) return '-'
+  const full = Math.floor(outs / 3)
+  const rem = outs % 3
+  if (rem === 0) return String(full)
+  return `${full}.${rem}`
 }
 
 const buildTopPlayers = (records, type) => {
@@ -200,11 +247,15 @@ const buildTopPlayers = (records, type) => {
             opsSamples: 0,
             hits: 0,
             homeRuns: 0,
+            rbi: 0,
+            runs: 0,
             eraTotal: 0,
             eraSamples: 0,
             wins: 0,
             holds: 0,
             saves: 0,
+            strikeouts: 0,
+            inningsOuts: 0,
           }
 
         current.games += 1
@@ -226,6 +277,14 @@ const buildTopPlayers = (records, type) => {
         if (hits != null) current.hits += hits
         const hr = toNumOrNull(player.home_runs)
         if (hr != null) current.homeRuns += hr
+        const rbi = toNumOrNull(player.rbi)
+        if (rbi != null) current.rbi += rbi
+        const runs = toNumOrNull(player.runs ?? player.runs_scored ?? player.r)
+        if (runs != null) current.runs += runs
+        const strikeouts = toNumOrNull(player.strikeouts ?? player.so)
+        if (strikeouts != null) current.strikeouts += strikeouts
+        const inningOuts = toNumOrNull(player.innings_pitched_outs)
+        if (inningOuts != null) current.inningsOuts += inningOuts
         if (typeof player.era === 'number') {
           current.eraTotal += player.era
           current.eraSamples += 1
