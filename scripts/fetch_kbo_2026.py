@@ -41,6 +41,9 @@ DAY_CELL_DATE_RE = re.compile(r"(\d{1,2})\.(\d{1,2})\(")
 HR_TOKEN_RE = re.compile(r"(\d+)?[홈Ȩ]")
 DOUBLE_TOKEN_RE = re.compile(r"(\d+)?2��")
 TRIPLE_TOKEN_RE = re.compile(r"(\d+)?3��")
+STRIKEOUT_TOKEN_RE = re.compile(r"(\d+)?삼진")
+STEAL_TOKEN_RE = re.compile(r"(\d+)?도루")
+HBP_TOKEN_RE = re.compile(r"(\d+)?사구")
 PERCENT_PREFIX_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)%")
 
 
@@ -286,6 +289,29 @@ def _extract_boxscore_team_tables(
   return hitters, pitchers
 
 
+def _count_event_tokens(team_table: dict[str, Any], token_re: re.Pattern[str]) -> int:
+  try:
+    t2 = json.loads(team_table["table2"])
+  except Exception:
+    return 0
+  total = 0
+  for row in t2.get("rows") or []:
+    ev_cells = row.get("row") or []
+    ev_text = " ".join(_clean_cell_text(c.get("Text")) for c in ev_cells)
+    for m in token_re.finditer(ev_text):
+      total += int(m.group(1)) if m.group(1) else 1
+  return total
+
+
+def _player_stats_has_boxscore_detail(players: list[dict[str, Any]]) -> bool:
+  for player in players:
+    if player.get("position_type") == "batter" and (player.get("at_bats") or 0) > 0:
+      return True
+    if player.get("position_type") == "pitcher" and player.get("innings_pitched_outs"):
+      return True
+  return False
+
+
 def _extract_hanwha_hitter_stats(
   team_table: dict[str, Any], team_name: str
 ) -> list[dict[str, Any]]:
@@ -326,6 +352,8 @@ def _extract_hanwha_hitter_stats(
     home_runs = 0
     doubles = 0
     triples = 0
+    strikeouts = 0
+    stolen_bases = 0
     if i < len(r2):
       ev_cells = r2[i].get("row") or []
       ev_text = " ".join(_clean_cell_text(c.get("Text")) for c in ev_cells)
@@ -335,6 +363,10 @@ def _extract_hanwha_hitter_stats(
         doubles += int(m.group(1)) if m.group(1) else 1
       for m in TRIPLE_TOKEN_RE.finditer(ev_text):
         triples += int(m.group(1)) if m.group(1) else 1
+      for m in STRIKEOUT_TOKEN_RE.finditer(ev_text):
+        strikeouts += int(m.group(1)) if m.group(1) else 1
+      for m in STEAL_TOKEN_RE.finditer(ev_text):
+        stolen_bases += int(m.group(1)) if m.group(1) else 1
 
     plate_appearances = None
     if at_bats is not None and walks is not None:
@@ -356,6 +388,8 @@ def _extract_hanwha_hitter_stats(
         "rbi": rbi if rbi is not None else 0,
         "runs": runs,
         "walks": walks if walks is not None else 0,
+        "strikeouts": strikeouts,
+        "stolen_bases": stolen_bases,
         "ops": None,
       }
     )
@@ -406,8 +440,9 @@ def _extract_hanwha_pitcher_stats(
     wins = 1 if ("승" in result_text) else 0
     holds = 1 if ("홀드" in result_text or "Ȧ" in result_text) else 0
     saves = 1 if ("세" in result_text) else 0
+    # KBO 투수표: 선수명,등판,결과,승,패,세,이닝,타자,투구수,타수,피안타,홈런,4사구,삼진,실점,자책,평균자책점
     innings_outs = _parse_innings_to_outs(vals[6])
-    at_bats_faced = parse_int(vals[9])
+    at_bats_faced = parse_int(vals[7])
     hits_allowed = parse_int(vals[10])
     home_runs_allowed = parse_int(vals[11])
     walks_allowed = parse_int(vals[12])
@@ -434,6 +469,7 @@ def _extract_hanwha_pitcher_stats(
         "hits_allowed": hits_allowed if hits_allowed is not None else 0,
         "home_runs_allowed": home_runs_allowed if home_runs_allowed is not None else 0,
         "walks_allowed": walks_allowed if walks_allowed is not None else 0,
+        "hit_by_pitch": 0,
         "strikeouts": strikeouts if strikeouts is not None else 0,
         "runs_allowed": runs_allowed if runs_allowed is not None else 0,
         "earned_runs": earned_runs if earned_runs is not None else 0,
@@ -444,6 +480,18 @@ def _extract_hanwha_pitcher_stats(
       }
     )
   return out
+
+
+def _assign_game_hit_by_pitch(
+  pitchers: list[dict[str, Any]], hbp_count: int
+) -> None:
+  if hbp_count <= 0 or not pitchers:
+    return
+  target = max(pitchers, key=lambda p: p.get("innings_pitched_outs") or 0)
+  target["hit_by_pitch"] = hbp_count
+  walks = target.get("walks_allowed") or 0
+  if walks >= hbp_count:
+    target["walks_allowed"] = walks - hbp_count
 
 
 def _fetch_key_player_metric_map(
@@ -535,7 +583,12 @@ def build_player_stats_from_kbo_row(
       if han_idx < len(hitters) and han_idx < len(pitchers):
         parsed = _extract_hanwha_hitter_stats(hitters[han_idx], "한화 이글스")
         parsed.extend(_extract_hanwha_pitcher_stats(pitchers[han_idx], "한화 이글스"))
-        if parsed:
+        opp_idx = 1 - han_idx
+        if opp_idx < len(hitters):
+          hbp_thrown = _count_event_tokens(hitters[opp_idx], HBP_TOKEN_RE)
+          game_pitchers = [p for p in parsed if p.get("position_type") == "pitcher"]
+          _assign_game_hit_by_pitch(game_pitchers, hbp_thrown)
+        if parsed and _player_stats_has_boxscore_detail(parsed):
           return _enrich_with_key_player_metrics(parsed, game_id, sr_id)
 
   stats: List[Dict[str, Any]] = []
@@ -626,9 +679,8 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
     "game_start_time": game_start_time,
     "source": "KBO",
   }
-  # GetScheduleList 기반 동기화에서는 선수 스탯이 빈 경우가 많아,
-  # 기존 상세 스탯이 이미 저장된 경기라면 덮어쓰지 않도록 비어 있을 때는 전송하지 않습니다.
-  if player_stats:
+  # 요약 스냅샷(이름만)으로 기존 박스스코어 스탯을 덮어쓰지 않습니다.
+  if player_stats and _player_stats_has_boxscore_detail(player_stats):
     payload["player_stats"] = player_stats
   return payload
 
