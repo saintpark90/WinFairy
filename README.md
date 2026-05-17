@@ -86,6 +86,8 @@ npm run dev
 3. **Environment Variables** (Production·Preview·Development 모두):
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_BASE_PATH`는 **설정하지 마세요** (또는 `/`만). `/WinFairy/`로 두면 JS가 로드되지 않습니다.  
+     Vercel 빌드 시 `vite.config.js`가 `VERCEL=1`이면 자동으로 `/`를 씁니다.
 4. Deploy 후 Supabase·Kakao Redirect URL에 `https://winfairy.vercel.app` 반영 (위 2)절)
 
 CLI로 배포할 때:
