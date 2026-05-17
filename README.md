@@ -1,7 +1,7 @@
 # 승요 이글스
 
 한화 이글스 직관 승률을 자동 집계하는 웹앱입니다.  
-GitHub Pages + Supabase + Kakao OAuth 조합으로 동작합니다.
+**Vercel**([winfairy.vercel.app](https://winfairy.vercel.app)) · GitHub Pages · Supabase · Kakao OAuth 조합으로 동작합니다.
 
 ## 1) 환경 변수
 
@@ -9,8 +9,10 @@ GitHub Pages + Supabase + Kakao OAuth 조합으로 동작합니다.
 
 - **로컬 개발**: 프로젝트 루트에 `.env.local`을 두면 Vite가 자동으로 읽습니다.  
   `.gitignore`에 의해 **저장소에 포함되지 않으므로** 운영 배포와 무관합니다.
-- **GitHub Pages 빌드**: `Deploy to GitHub Pages` 워크플로우가 저장소 **Actions secrets**의  
-  `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`만 빌드 시 주입합니다. 로컬 `.env.local`은 사용되지 않습니다.
+- **GitHub Pages 빌드**: `Deploy to GitHub Pages` 워크플로우가 **Actions secrets**의  
+  `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`와 `VITE_BASE_PATH=/WinFairy/`를 주입합니다.
+- **Vercel 빌드**: 프로젝트 **Environment Variables**에 동일한 `VITE_*` 키를 등록합니다.  
+  `VITE_BASE_PATH`는 `vercel.json`에서 `/`로 설정되어 있습니다(루트 도메인 배포).
 
 예시(로컬):
 
@@ -22,7 +24,7 @@ cp .env.example .env.local
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
-- `VITE_BASE_PATH` (GitHub Pages 저장소 경로, 예: `/seungyo-eagles/`)
+- `VITE_BASE_PATH` — Vercel·로컬: `/`, GitHub Pages: `/WinFairy/`
 - Python 스크립트용(선택): `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
 
 ## 2) Supabase 설정
@@ -31,9 +33,12 @@ cp .env.example .env.local
 2. `supabase/schema.sql` 실행 (이미 운영 중인 DB에는 `supabase/membership_leaderboard.sql`만 추가 실행해도 됩니다)
 3. Authentication > Providers > Kakao 활성화
 4. Kakao Developers에서 앱 생성 후 REST API 키/Secret 등록
-5. Redirect URL 등록:
-   - `http://localhost:5173`
-   - `https://<github-id>.github.io/<repo>/`
+5. Redirect URL 등록 (Authentication > URL Configuration):
+   - Site URL: `https://winfairy.vercel.app`
+   - Redirect URLs:
+     - `http://localhost:5173/**`
+     - `https://winfairy.vercel.app/**`
+     - `https://<github-id>.github.io/WinFairy/**` (GitHub Pages 사용 시)
 
 ## 3) 2026 경기 데이터 적재
 
@@ -72,13 +77,35 @@ npm install
 npm run dev
 ```
 
-## 5) GitHub Pages 배포
+## 5) Vercel 배포 (winfairy.vercel.app)
+
+저장소 루트의 `vercel.json`이 Vite 빌드·SPA 라우팅·`VITE_BASE_PATH=/`를 설정합니다.
+
+1. [Vercel](https://vercel.com) 로그인 → **Add New Project** → GitHub `WinFairy` 저장소 Import
+2. **Project Name**을 `winfairy`로 설정 → 배포 URL이 `https://winfairy.vercel.app`이 됩니다
+3. **Environment Variables** (Production·Preview·Development 모두):
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. Deploy 후 Supabase·Kakao Redirect URL에 `https://winfairy.vercel.app` 반영 (위 2)절)
+
+CLI로 배포할 때:
+
+```bash
+npm i -g vercel
+vercel login
+vercel link   # 프로젝트 이름: winfairy
+vercel env add VITE_SUPABASE_URL
+vercel env add VITE_SUPABASE_ANON_KEY
+vercel --prod
+```
+
+## 6) GitHub Pages 배포
 
 권장: GitHub Actions로 `dist` 자동 배포.
 
 1. 저장소 Settings > Pages > Source를 "GitHub Actions"로 선택
-2. Vite 빌드(`npm run build`) 후 `dist`를 Pages에 publish하는 워크플로우 추가
-3. 배포 URL을 Kakao Redirect URL에도 추가
+2. Actions secrets에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 등록
+3. 배포 URL: `https://<github-id>.github.io/WinFairy/`
 
 ## 구현된 기능
 
