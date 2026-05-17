@@ -43,6 +43,7 @@ DOUBLE_TOKEN_RE = re.compile(r"(\d+)?2��")
 TRIPLE_TOKEN_RE = re.compile(r"(\d+)?3��")
 STRIKEOUT_TOKEN_RE = re.compile(r"(\d+)?삼진")
 STEAL_TOKEN_RE = re.compile(r"(\d+)?도루")
+STEAL_TABLE_ETC_RE = re.compile(r"([^\s(,]+)\(\d+회")
 HBP_TOKEN_RE = re.compile(r"(\d+)?사구")
 PERCENT_PREFIX_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)%")
 
@@ -262,7 +263,7 @@ def parse_float(value: Any) -> float | None:
 
 def _extract_boxscore_team_tables(
   game_id: str, season: int, sr_id: str = "0"
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None] | None:
   endpoint = "https://www.koreabaseball.com/ws/Schedule.asmx/GetBoxScoreScroll"
   params = {
     "leId": "1",
@@ -286,7 +287,42 @@ def _extract_boxscore_team_tables(
   pitchers = payload.get("arrPitcher") or []
   if not isinstance(hitters, list) or not isinstance(pitchers, list):
     return None
-  return hitters, pitchers
+  table_etc_raw = payload.get("tableEtc")
+  table_etc: dict[str, Any] | None = None
+  if table_etc_raw:
+    try:
+      table_etc = json.loads(table_etc_raw) if isinstance(table_etc_raw, str) else table_etc_raw
+    except Exception:
+      table_etc = None
+  return hitters, pitchers, table_etc
+
+
+def _parse_steals_from_table_etc(table_etc: dict[str, Any] | None) -> dict[str, int]:
+  """게임 요약(tableEtc)의 '도루' 행 — KBO는 타석별 이벤트(table2)에 도루를 넣지 않습니다."""
+  if not table_etc:
+    return {}
+  counts: dict[str, int] = {}
+  for row in table_etc.get("rows") or []:
+    cells = row.get("row") or []
+    if len(cells) < 2:
+      continue
+    if _clean_cell_text(cells[0].get("Text")) != "도루":
+      continue
+    text = _clean_cell_text(cells[1].get("Text"))
+    for name in STEAL_TABLE_ETC_RE.findall(text):
+      counts[name] = counts.get(name, 0) + 1
+  return counts
+
+
+def _apply_hanwha_stolen_bases(
+  batters: list[dict[str, Any]], steal_counts: dict[str, int]
+) -> None:
+  if not steal_counts:
+    return
+  for player in batters:
+    name = player.get("player_name")
+    if name in steal_counts:
+      player["stolen_bases"] = steal_counts[name]
 
 
 def _count_event_tokens(team_table: dict[str, Any], token_re: re.Pattern[str]) -> int:
@@ -578,10 +614,12 @@ def build_player_stats_from_kbo_row(
   if game_id:
     team_tables = _extract_boxscore_team_tables(game_id, season)
     if team_tables:
-      hitters, pitchers = team_tables
+      hitters, pitchers, table_etc = team_tables
       han_idx = 1 if is_home else 0
       if han_idx < len(hitters) and han_idx < len(pitchers):
         parsed = _extract_hanwha_hitter_stats(hitters[han_idx], "한화 이글스")
+        han_batters = [p for p in parsed if p.get("position_type") == "batter"]
+        _apply_hanwha_stolen_bases(han_batters, _parse_steals_from_table_etc(table_etc))
         parsed.extend(_extract_hanwha_pitcher_stats(pitchers[han_idx], "한화 이글스"))
         opp_idx = 1 - han_idx
         if opp_idx < len(hitters):
