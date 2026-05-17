@@ -89,6 +89,8 @@ npm run dev
    - `VITE_BASE_PATH`는 **설정하지 마세요** (또는 `/`만). `/WinFairy/`로 두면 JS가 로드되지 않습니다.  
      Vercel 빌드 시 `vite.config.js`가 `VERCEL=1`이면 자동으로 `/`를 씁니다.
 4. Deploy 후 Supabase·Kakao Redirect URL에 `https://winfairy.vercel.app` 반영 (위 2)절)
+5. **Analytics**: Vercel 프로젝트 → **Analytics** 탭 → **Web Analytics** 활성화  
+   (코드는 `@vercel/analytics` + `src/main.jsx`의 `<Analytics />` — Next.js용 `/next`가 아니라 `/react` 사용)
 
 CLI로 배포할 때:
 
