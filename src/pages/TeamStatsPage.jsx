@@ -176,10 +176,11 @@ const computeTeamBatting = (decidedMatches) => {
         0,
       ) || null,
     hits: sumByKeys(batters, ['hits', 'h']),
-    doubles: sumByKeys(batters, ['doubles', '2b']),
-    triples: sumByKeys(batters, ['triples', '3b']),
     homeRuns: sumByKeys(batters, ['home_runs', 'hr']),
     rbi: sumByKeys(batters, ['rbi']),
+    walksBatting: walks,
+    strikeouts: sumByKeys(batters, ['strikeouts', 'so', 'strikeout']),
+    stolenBases: sumByKeys(batters, ['stolen_bases', 'sb', 'stolen_base']),
   }
 }
 
@@ -376,10 +377,11 @@ function TeamStatsPage({ userId }) {
                     <th>타수</th>
                     <th>득점</th>
                     <th>안타</th>
-                    <th>2루타</th>
-                    <th>3루타</th>
                     <th>홈런</th>
                     <th>타점</th>
+                    <th>볼넷</th>
+                    <th>삼진</th>
+                    <th>도루</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -391,10 +393,11 @@ function TeamStatsPage({ userId }) {
                     <td>{formatValue(teamBattingMine.atBats, 0)}</td>
                     <td>{formatValue(teamBattingMine.runs, 0)}</td>
                     <td>{formatValue(teamBattingMine.hits, 0)}</td>
-                    <td>{formatValue(teamBattingMine.doubles, 0)}</td>
-                    <td>{formatValue(teamBattingMine.triples, 0)}</td>
                     <td>{formatValue(teamBattingMine.homeRuns, 0)}</td>
                     <td>{formatValue(teamBattingMine.rbi, 0)}</td>
+                    <td>{formatValue(teamBattingMine.walksBatting, 0)}</td>
+                    <td>{formatValue(teamBattingMine.strikeouts, 0)}</td>
+                    <td>{formatValue(teamBattingMine.stolenBases, 0)}</td>
                   </tr>
                   <tr className="team-stats-row-all">
                     <th scope="row">전체 성적</th>
@@ -404,10 +407,11 @@ function TeamStatsPage({ userId }) {
                     <td>{formatValue(teamBattingAll.atBats, 0)}</td>
                     <td>{formatValue(teamBattingAll.runs, 0)}</td>
                     <td>{formatValue(teamBattingAll.hits, 0)}</td>
-                    <td>{formatValue(teamBattingAll.doubles, 0)}</td>
-                    <td>{formatValue(teamBattingAll.triples, 0)}</td>
                     <td>{formatValue(teamBattingAll.homeRuns, 0)}</td>
                     <td>{formatValue(teamBattingAll.rbi, 0)}</td>
+                    <td>{formatValue(teamBattingAll.walksBatting, 0)}</td>
+                    <td>{formatValue(teamBattingAll.strikeouts, 0)}</td>
+                    <td>{formatValue(teamBattingAll.stolenBases, 0)}</td>
                   </tr>
                 </tbody>
               </table>

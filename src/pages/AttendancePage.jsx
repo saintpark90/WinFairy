@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { formatStadiumShort } from '../lib/stadiumShort'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 import { getKoreanDayMark, isKoreanNonRedDayMark, isKoreanPublicHolidayMark } from '../lib/koreanHolidays'
 import { getMatchResultKind, isMatchCancelled, isMatchDecided } from '../lib/stats'
 
 const DAY_LABELS_MON = ['월', '화', '수', '목', '금', '토', '일']
+const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토']
 
 const toMonthKey = (dateText) => dateText.slice(0, 7)
 
@@ -56,6 +58,20 @@ const pendingStartTimeText = (match) => {
   const t = match.game_start_time
   if (typeof t === 'string' && t.trim()) return t.trim()
   return null
+}
+
+const formatAttendanceListDate = (isoDate) => {
+  const d = new Date(`${isoDate}T12:00:00`)
+  const w = WEEKDAY_KO[d.getDay()]
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${w})`
+}
+
+const scoreTextForList = (match) => {
+  const line = scoreLineForCell(match)
+  if (line) return line
+  const time = pendingStartTimeText(match)
+  if (time) return time
+  return '–'
 }
 
 function AttendancePage({ userId }) {
@@ -163,6 +179,22 @@ function AttendancePage({ userId }) {
     }
     return cells
   }, [viewMonth, matchesByDate])
+
+  const attendedList = useMemo(
+    () =>
+      [...attendedSet]
+        .sort((a, b) => a.localeCompare(b))
+        .map((dateText, index) => {
+          const match = matchesByDate.get(dateText) ?? null
+          return {
+            dateText,
+            order: index + 1,
+            match,
+            resultKind: match ? getMatchResultKind(match) : 'none',
+          }
+        }),
+    [attendedSet, matchesByDate],
+  )
 
   const toggleAttendanceForDate = (dateText) => {
     if (!supabase) {
@@ -435,6 +467,92 @@ function AttendancePage({ userId }) {
           </>
         ) : null}
       </div>
+
+      {!calendarLoading && !calendarError ? (
+        <div className="attendance-list-wrap">
+          <p className="attendance-list-summary">
+            총 <strong>{attendedList.length}</strong>경기 직관
+          </p>
+          {attendedList.length ? (
+            <div className="table-wrap attendance-list-table-wrap">
+              <table className="attendance-list-table">
+                <thead>
+                  <tr>
+                    <th scope="col">순서</th>
+                    <th scope="col">날짜</th>
+                    <th scope="col">상대팀</th>
+                    <th scope="col">경기장</th>
+                    <th scope="col">스코어</th>
+                    <th scope="col">경기결과</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attendedList.map((row) => {
+                    const logoUrl = row.match
+                      ? getOpponentTeamLogoUrl(row.match.opponent_team)
+                      : null
+                    return (
+                      <tr
+                        key={row.dateText}
+                        className={`attendance-list-row attendance-list-row--${row.resultKind}`}
+                      >
+                        <td>{row.order}</td>
+                        <td>{formatAttendanceListDate(row.dateText)}</td>
+                        <td>
+                          {row.match ? (
+                            <span className="attendance-list-opponent">
+                              {logoUrl ? (
+                                <img
+                                  className="team-logo-inline"
+                                  src={logoUrl}
+                                  alt=""
+                                  loading="lazy"
+                                  decoding="async"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none'
+                                  }}
+                                />
+                              ) : null}
+                              <span>{row.match.opponent_team ?? '–'}</span>
+                            </span>
+                          ) : (
+                            '–'
+                          )}
+                        </td>
+                        <td
+                          className="attendance-list-stadium"
+                          title={row.match?.stadium ?? ''}
+                        >
+                          {row.match ? formatStadiumShort(row.match.stadium) : '–'}
+                        </td>
+                        <td>{row.match ? scoreTextForList(row.match) : '–'}</td>
+                        <td>
+                          {row.match ? (
+                            <span
+                              className={[
+                                'attendance-list-result',
+                                `attendance-list-result--${row.resultKind}`,
+                              ].join(' ')}
+                            >
+                              {resultLabelShort(row.match)}
+                            </span>
+                          ) : (
+                            '–'
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="muted attendance-list-empty">
+              달력에서 날짜를 선택하면 직관 목록에 표시됩니다.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {actionMessage ? <p className="error">{actionMessage}</p> : null}
     </section>

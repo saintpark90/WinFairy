@@ -1007,6 +1007,126 @@ td.stat-rank-col {
   margin-top: auto;
 }
 
+.attendance-list-wrap {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  min-width: 0;
+}
+
+.attendance-list-summary {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.attendance-list-summary strong {
+  color: #ea580c;
+  font-weight: 700;
+}
+
+.attendance-list-empty {
+  margin: 0;
+}
+
+.attendance-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: min(100%, 20rem);
+}
+
+.attendance-list-table th,
+.attendance-list-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+
+.attendance-list-table thead th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.attendance-list-table th:nth-child(3),
+.attendance-list-table td:nth-child(3) {
+  text-align: left;
+}
+
+.attendance-list-stadium {
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.attendance-list-opponent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.attendance-list-opponent span {
+  font-weight: 500;
+}
+
+/* 달력 셀과 동일한 승패 배경 */
+.attendance-list-row--win {
+  background: #e3edff;
+}
+
+.attendance-list-row--loss {
+  background: #ffe6d6;
+}
+
+.attendance-list-row--draw,
+.attendance-list-row--cancelled {
+  background: #f3f4f6;
+}
+
+.attendance-list-row--pending,
+.attendance-list-row--none {
+  background: #fff;
+}
+
+.attendance-list-result {
+  display: inline-block;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.attendance-list-result--win {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.attendance-list-result--loss {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.attendance-list-result--draw {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.attendance-list-result--pending,
+.attendance-list-result--none {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.attendance-list-result--cancelled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 input,
 button {
   font: inherit;

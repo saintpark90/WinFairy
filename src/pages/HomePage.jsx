@@ -41,7 +41,7 @@ const recentGameScoreText = (match) => {
 }
 
 const getWinRateComment = (winRate, totalGames, userDisplayName) => {
-  if (totalGames <= 3) {
+  if (totalGames < 3) {
     return '3경기 이상 직관정보 입력시 멘트가 표기됩니다.'
   }
   if (winRate === 0) {
@@ -87,7 +87,7 @@ const formatStatValue = (value, digits = 3) => {
 
 const WarInfoHeader = () => (
   <span className="top5-header-with-tip">
-    WAR(대체)
+    WAR
     <span
       className="top5-info-tip"
       role="button"
@@ -96,7 +96,7 @@ const WarInfoHeader = () => (
     >
       ?
       <span className="top5-info-tip-bubble" role="tooltip">
-        KBO 공개 API에서 경기 단위 WAR를 제공하지 않아, 이 값은 경기 WPA 기반 대체 지표입니다.
+        KBO는 공식적으로 WAR를 제공하지 않습니다. 이 값은 경기 WPA 기반 대체 지표입니다.
       </span>
     </span>
   </span>
@@ -410,7 +410,7 @@ function HomePage({ userId, userDisplayName }) {
             <div>
               <h3>직관일 기준 타자 TOP5</h3>
               <p className="top5-hint">
-                직관 경기 수집 데이터를 WAR(대체지표: 경기 WPA) 기준으로 정렬합니다.
+                내가 직관갔던 날엔 누가 최고의 타자였을까?
               </p>
               {stats.topBatters.length ? (
                 <div className="table-wrap top5-table-wrap">
@@ -454,7 +454,7 @@ function HomePage({ userId, userDisplayName }) {
             <div>
               <h3>직관일 기준 투수 TOP5</h3>
               <p className="top5-hint">
-                직관 경기 수집 데이터를 WAR(대체지표: 경기 WPA) 기준으로 정렬합니다.
+                내가 직관 간 날의 에이스는? 
               </p>
               {stats.topPitchers.length ? (
                 <div className="table-wrap top5-table-wrap">
