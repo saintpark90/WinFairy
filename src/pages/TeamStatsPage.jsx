@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { getMatchResultKind, isHanwhaWin, isMatchDecided } from '../lib/stats'
+import AttendancePlayerRankings from '../components/AttendancePlayerRankings'
+import {
+  aggregateBattingAvgFromTotals,
+  formatBattingAvg,
+  getMatchResultKind,
+  isHanwhaWin,
+  isMatchDecided,
+} from '../lib/stats'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 
 const HANWHA_TEAM_NAME = '한화이글스'
@@ -50,13 +57,6 @@ const formatValue = (value, digits = 3) => {
     const trimmed = s.replace(/\.?0+$/, '')
     return trimmed === '' ? '0' : trimmed
   }
-  return String(value)
-}
-
-/** 타율: 항상 소수 셋째 자리까지 표기 (예: 0.270) */
-const formatBattingAvg = (value) => {
-  if (value == null || Number.isNaN(value)) return '-'
-  if (typeof value === 'number') return value.toFixed(3)
   return String(value)
 }
 
@@ -159,6 +159,7 @@ const computeTeamBatting = (decidedMatches) => {
   )
 
   const atBats = sumByKeys(batters, ['at_bats', 'ab'])
+  const hits = sumByKeys(batters, ['hits', 'h'])
   const walks = sumByKeys(batters, ['walks', 'bb'])
   let plateAppearances = sumByKeys(batters, ['plate_appearances', 'pa'])
   if (plateAppearances == null && atBats != null && walks != null) {
@@ -166,7 +167,7 @@ const computeTeamBatting = (decidedMatches) => {
   }
 
   return {
-    battingAvg: avgByKeys(batters, ['batting_avg', 'avg'], 3),
+    battingAvg: aggregateBattingAvgFromTotals(hits, atBats),
     games,
     plateAppearances,
     atBats,
@@ -175,7 +176,7 @@ const computeTeamBatting = (decidedMatches) => {
         (acc, m) => acc + (typeof m.hanwha_score === 'number' ? m.hanwha_score : 0),
         0,
       ) || null,
-    hits: sumByKeys(batters, ['hits', 'h']),
+    hits,
     homeRuns: sumByKeys(batters, ['home_runs', 'hr']),
     rbi: sumByKeys(batters, ['rbi']),
     walksBatting: walks,
@@ -468,6 +469,8 @@ function TeamStatsPage({ userId }) {
               <p className="muted">표시할 직관 경기 기록이 없습니다.</p>
             )}
           </section>
+
+          <AttendancePlayerRankings attendanceRecords={attendanceRecords} />
         </>
       ) : null}
     </section>

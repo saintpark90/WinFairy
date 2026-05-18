@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { getUserDisplayFields } from '../lib/userDisplay'
+import { getUserDisplayFields, optimizeAvatarUrl } from '../lib/userDisplay'
 import { supabase } from '../lib/supabase'
 
 function ProfilePage({ user, onAccountDeleted }) {
   const { displayName, avatarUrl } = getUserDisplayFields(user)
+  const profileAvatarSrc = optimizeAvatarUrl(avatarUrl, 88)
   const email = user?.email ?? ''
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -44,13 +45,18 @@ function ProfilePage({ user, onAccountDeleted }) {
       <section className="card profile-card">
         <h2>내 정보</h2>
         <div className="profile-layout">
-          {avatarUrl ? (
-            <img
-              className="profile-avatar-large"
-              src={avatarUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-            />
+          {profileAvatarSrc ? (
+            <span className="profile-avatar-wrap">
+              <img
+                className="profile-avatar-large"
+                src={profileAvatarSrc}
+                alt=""
+                width={88}
+                height={88}
+                decoding="async"
+                referrerPolicy="no-referrer"
+              />
+            </span>
           ) : (
             <span className="user-avatar user-avatar-fallback profile-avatar-large" aria-hidden>
               {displayName.slice(0, 1)}

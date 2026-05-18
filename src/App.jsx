@@ -169,6 +169,13 @@ function App() {
             <h1 className="login-title do-hyeon-regular">승리요정</h1>
             <p className="login-tagline">당신의 승리기운을 위하여</p>
             <p className="login-description"></p>
+            <form
+              className="login-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                signInWithKakao()
+              }}
+            >
             <div className="login-participation-wrap">
               <input
                 id="login-participation-code"
@@ -196,7 +203,7 @@ function App() {
                 {authError ? <p className="error">{authError}</p> : null}
               </>
             )}
-            <button type="button" className="kakao-login-button" onClick={signInWithKakao}>
+            <button type="submit" className="kakao-login-button">
               <span className="kakao-icon" aria-hidden>
                 <svg viewBox="0 0 24 22" role="img" focusable="false" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -207,6 +214,7 @@ function App() {
               </span>
               <span className="kakao-login-button-label">카카오톡으로 로그인</span>
             </button>
+            </form>
           </div>
         </div>
       </div>

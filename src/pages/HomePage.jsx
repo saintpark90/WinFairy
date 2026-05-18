@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { buildDailyPlayerPicks } from '../lib/dailyPlayerPicks'
 import {
   buildDashboardStats,
+  formatBattingAvg,
   formatInningsFromOuts,
   getMatchResultKind,
   isMatchCancelled,
@@ -249,6 +251,10 @@ function HomePage({ userId, userDisplayName }) {
     () => buildDashboardStats(attendanceRecords),
     [attendanceRecords],
   )
+  const dailyPicks = useMemo(
+    () => buildDailyPlayerPicks(attendanceRecords),
+    [attendanceRecords],
+  )
   const winRateComment = useMemo(
     () => getWinRateComment(stats.summary.winRate, stats.summary.totalGames, userDisplayName),
     [stats.summary.totalGames, stats.summary.winRate, userDisplayName],
@@ -406,6 +412,24 @@ function HomePage({ userId, userDisplayName }) {
             showRunsColumns
           />
 
+          <section className="card dashboard-daily-picks-row" aria-label="오늘의 유니폼 추천">
+            {dailyPicks.uniform ? (
+              <p className="daily-pick-line">
+                <span className="daily-pick-line-label">⚾ 오늘 나의 운명의 추천 유니폼 마킹은? :</span>
+                <span className="daily-pick-line-value">
+                  {dailyPicks.uniform.number != null
+                    ? `${dailyPicks.uniform.number}번 `
+                    : ''}
+                  {dailyPicks.uniform.playerName} 🦅
+                </span>
+              </p>
+            ) : (
+              <p className="muted daily-pick-line">
+                오늘 나의 유니폼 추천 마킹 : 직관한 경기의 한화 선수 기록이 쌓이면 추천해 드려요.
+              </p>
+            )}
+          </section>
+
           <section className="card grid2">
             <div>
               <h3>직관일 기준 타자 TOP5</h3>
@@ -436,7 +460,7 @@ function HomePage({ userId, userDisplayName }) {
                           <td>{index + 1}</td>
                           <td className="top5-player-name">{player.playerName}</td>
                           <td>{formatStatValue(player.war)}</td>
-                          <td>{formatStatValue(player.battingAvg)}</td>
+                          <td>{formatBattingAvg(player.battingAvg)}</td>
                           <td>{player.hits ?? 0}</td>
                           <td>{player.homeRuns ?? 0}</td>
                           <td>{player.rbi ?? 0}</td>

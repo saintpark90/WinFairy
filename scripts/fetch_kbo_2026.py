@@ -46,6 +46,25 @@ STEAL_TOKEN_RE = re.compile(r"(\d+)?도루")
 STEAL_TABLE_ETC_RE = re.compile(r"([^\s(,]+)\(\d+회")
 HBP_TOKEN_RE = re.compile(r"(\d+)?사구")
 PERCENT_PREFIX_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)%")
+REGISTER_ALL_URL = "https://www.koreabaseball.com/Player/RegisterAll.aspx"
+ROSTER_NAME_NUM_RE = re.compile(r"([가-힣A-Za-z][가-힣A-Za-z\.]{0,40})\((\d{1,2})\)")
+SEARCH_PLAYER_URL = "https://www.koreabaseball.com/ws/Controls.asmx/GetSearchPlayer"
+# GetSearchPlayer(name=성씨/이름) — 1군 등록현황에 없어도 KBO 등록 선수 조회 가능
+ROSTER_SEARCH_PREFIXES = tuple(
+  "김이박최정강조윤장임한오서신권황안송류홍문양배백허유남심노하곽성차주구민진지엄원천방공현변석설마길연위표명기반라왕금옥육인제모탁국여어은편용예경"
+)
+ROSTER_NEXT_TEAM_MARKERS = (
+  "롯데",
+  "두산",
+  "KIA",
+  "키움",
+  "삼성",
+  "SSG",
+  "LG",
+  "KT",
+  "NC",
+  "전체등록",
+)
 
 
 def require_env(name: str) -> str:
@@ -261,6 +280,184 @@ def parse_float(value: Any) -> float | None:
   return None
 
 
+def _normalize_roster_player_name(name: str) -> str:
+  return re.sub(r"\s+", "", (name or "").strip())
+
+
+def _register_all_hanwha_map() -> Dict[str, int]:
+  """1·2군 포함 전체 등록현황(RegisterAll) 한화 구간."""
+  headers = {"User-Agent": "Mozilla/5.0 (compatible; WinFairy/1.0; +https://github.com/)"}
+  try:
+    resp = requests.get(REGISTER_ALL_URL, headers=headers, timeout=60)
+    resp.raise_for_status()
+    if not resp.encoding or resp.encoding.lower() == "iso-8859-1":
+      resp.encoding = resp.apparent_encoding or "utf-8"
+    text = resp.text
+  except Exception:
+    return {}
+
+  start = text.find("한화")
+  if start < 0:
+    return {}
+
+  end = len(text)
+  for team in ROSTER_NEXT_TEAM_MARKERS:
+    pos = text.find(team, start + 10)
+    if pos > start:
+      end = min(end, pos)
+
+  out: Dict[str, int] = {}
+  for match in ROSTER_NAME_NUM_RE.finditer(text[start:end]):
+    name = _normalize_roster_player_name(match.group(1))
+    if len(name) < 2:
+      continue
+    out.setdefault(name, int(match.group(2)))
+  return out
+
+
+def _search_player_headers() -> Dict[str, str]:
+  return {
+    "User-Agent": "Mozilla/5.0 (compatible; WinFairy/1.0; +https://github.com/)",
+    "X-Requested-With": "XMLHttpRequest",
+    "Referer": "https://www.koreabaseball.com/Player/Search.aspx",
+  }
+
+
+def _lookup_hanwha_player_by_name(name: str) -> Tuple[str, int] | None:
+  """KBO 선수검색 API — 1군 등록 명단에 없는 선수(예: 2군)도 BACK_NO 조회."""
+  query = (name or "").strip()
+  if len(query) < 2:
+    return None
+  try:
+    resp = requests.post(
+      SEARCH_PLAYER_URL,
+      data={"name": query},
+      headers=_search_player_headers(),
+      timeout=20,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+  except Exception:
+    return None
+
+  if payload.get("code") != "100":
+    return None
+
+  for bucket in ("now", "retire"):
+    for row in payload.get(bucket) or []:
+      if row.get("T_ID") != "HH":
+        continue
+      player_name = _normalize_roster_player_name(row.get("P_NM"))
+      back_no = parse_int(row.get("BACK_NO"))
+      if player_name and back_no is not None:
+        return player_name, back_no
+  return None
+
+
+def _merge_search_prefix_into_roster(out: Dict[str, int], prefix: str) -> None:
+  prefix = (prefix or "").strip()
+  if len(prefix) < 2:
+    return
+  try:
+    resp = requests.post(
+      SEARCH_PLAYER_URL,
+      data={"name": prefix},
+      headers=_search_player_headers(),
+      timeout=20,
+    )
+    resp.raise_for_status()
+    payload = resp.json()
+  except Exception:
+    return
+
+  if payload.get("code") != "100":
+    return
+
+  for bucket in ("now", "retire"):
+    for row in payload.get(bucket) or []:
+      if row.get("T_ID") != "HH":
+        continue
+      player_name = _normalize_roster_player_name(row.get("P_NM"))
+      back_no = parse_int(row.get("BACK_NO"))
+      if player_name and back_no is not None:
+        out[player_name] = back_no
+
+
+def _collect_hanwha_names_from_player_stats(
+  matches: List[Dict[str, Any]],
+) -> set[str]:
+  names: set[str] = set()
+  for match in matches:
+    for player in match.get("player_stats") or []:
+      team = player.get("team_name") or ""
+      if not any(k in team for k in HANWHA_KEYWORDS):
+        continue
+      player_name = (player.get("player_name") or "").strip()
+      if player_name:
+        names.add(player_name)
+  return names
+
+
+def fetch_hanwha_roster_number_map(
+  extra_names: set[str] | None = None,
+) -> Dict[str, int]:
+  """
+  한화 선수 등번호 맵.
+  - RegisterAll(전체 등록)
+  - 선수검색 API(성씨·이름·2글자 접두 — 1군 제외 선수 포함)
+  - 경기 박스스코어에 등장한 선수 이름
+  """
+  out = _register_all_hanwha_map()
+
+  prefixes: set[str] = set(ROSTER_SEARCH_PREFIXES)
+  for name in list(out.keys()) + list(extra_names or []):
+    normalized = _normalize_roster_player_name(name)
+    if len(normalized) >= 2:
+      prefixes.add(normalized[:2])
+    if len(normalized) >= 3:
+      prefixes.add(normalized[:3])
+
+  for prefix in sorted(prefixes):
+    _merge_search_prefix_into_roster(out, prefix)
+    time.sleep(0.05)
+
+  lookup_names: set[str] = set(out.keys()) | set(extra_names or [])
+  for raw_name in sorted(lookup_names):
+    found = _lookup_hanwha_player_by_name(raw_name)
+    if found:
+      canonical, back_no = found
+      out[canonical] = back_no
+    time.sleep(0.04)
+
+  return dict(sorted(out.items(), key=lambda item: item[0]))
+
+
+def write_hanwha_roster_json(
+  target_path: str, roster: Dict[str, int] | None = None
+) -> int:
+  numbers = roster if roster is not None else fetch_hanwha_roster_number_map()
+  os.makedirs(os.path.dirname(target_path) or ".", exist_ok=True)
+  with open(target_path, "w", encoding="utf-8") as handle:
+    json.dump(numbers, handle, ensure_ascii=False, indent=2)
+  return len(numbers)
+
+
+def _attach_back_numbers(
+  players: List[Dict[str, Any]], roster_map: Dict[str, int]
+) -> List[Dict[str, Any]]:
+  if not roster_map:
+    return players
+  for player in players:
+    name = player.get("player_name")
+    if not name:
+      continue
+    key = _normalize_roster_player_name(name)
+    number = roster_map.get(key)
+    if number is not None:
+      player["back_number"] = number
+  return players
+
+
 def _extract_boxscore_team_tables(
   game_id: str, season: int, sr_id: str = "0"
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any] | None] | None:
@@ -295,6 +492,78 @@ def _extract_boxscore_team_tables(
     except Exception:
       table_etc = None
   return hitters, pitchers, table_etc
+
+
+def _fetch_get_box_score_payload(
+  game_id: str, season: int, sr_id: str = "0"
+) -> dict[str, Any] | None:
+  """게임센터 통합 박스스코어 — 타자 표에 경기별 득점 열이 포함됩니다(GetBoxScoreScroll table1에는 없음)."""
+  endpoint = "https://www.koreabaseball.com/ws/Schedule.asmx/GetBoxScore"
+  params = {
+    "leId": "1",
+    "srId": sr_id,
+    "seasonId": str(season),
+    "gameId": game_id,
+  }
+  headers = {
+    "User-Agent": "Mozilla/5.0 (compatible; WinFairy/1.0; +https://github.com/)",
+    "X-Requested-With": "XMLHttpRequest",
+    "Referer": f"https://www.koreabaseball.com/Schedule/GameCenter/Main.aspx?gameId={game_id}&section=REVIEW",
+  }
+  try:
+    resp = requests.post(endpoint, data=params, headers=headers, timeout=30)
+    resp.raise_for_status()
+    payload = resp.json()
+  except Exception:
+    return None
+  if not isinstance(payload, dict) or not payload.get("tables"):
+    return None
+  return payload
+
+
+def _parse_batter_lines_from_boxscore_table(
+  table: dict[str, Any],
+) -> dict[str, dict[str, int]]:
+  """GetBoxScore 타자 표 — 마지막 5열: 타수·안타·타점·득점·타율(시즌)."""
+  out: dict[str, dict[str, int]] = {}
+  for block in table.get("rows") or []:
+    cells = block.get("row") or []
+    if len(cells) < 8:
+      continue
+    vals = [_clean_cell_text(c.get("Text")) for c in cells]
+    order = vals[0] if vals else ""
+    name = vals[2] if len(vals) > 2 else ""
+    if not name or not order.isdigit():
+      continue
+    ab = parse_int(vals[-5])
+    hits = parse_int(vals[-4])
+    rbi = parse_int(vals[-3])
+    runs = parse_int(vals[-2])
+    out[name] = {
+      "at_bats": ab if ab is not None else 0,
+      "hits": hits if hits is not None else 0,
+      "rbi": rbi if rbi is not None else 0,
+      "runs": runs if runs is not None else 0,
+    }
+  return out
+
+
+def _merge_batter_lines_from_get_box_score(
+  batters: list[dict[str, Any]], lines: dict[str, dict[str, int]]
+) -> None:
+  for player in batters:
+    if player.get("position_type") != "batter":
+      continue
+    name = player.get("player_name")
+    if not name:
+      continue
+    line = lines.get(name)
+    if not line:
+      continue
+    player["at_bats"] = line["at_bats"]
+    player["hits"] = line["hits"]
+    player["rbi"] = line["rbi"]
+    player["runs"] = line["runs"]
 
 
 def _parse_steals_from_table_etc(table_etc: dict[str, Any] | None) -> dict[str, int]:
@@ -372,13 +641,7 @@ def _extract_hanwha_hitter_stats(
     if not player_name:
       continue
 
-    runs = 0
-    if len(row1) >= 4:
-      parsed_runs = parse_int(_clean_cell_text(row1[3].get("Text")))
-      if parsed_runs is not None:
-        runs = parsed_runs
-
-    # table3: [타수, 안타, 타점, 볼넷, 타율] 구조
+    # table3: [타수, 안타, 타점, 볼넷, 타율] 구조 (득점은 GetBoxScore에서 병합)
     at_bats = parse_int(_clean_cell_text(row3[0].get("Text")))
     hits = parse_int(_clean_cell_text(row3[1].get("Text")))
     rbi = parse_int(_clean_cell_text(row3[2].get("Text")))
@@ -422,7 +685,7 @@ def _extract_hanwha_hitter_stats(
         "triples": triples,
         "home_runs": home_runs,
         "rbi": rbi if rbi is not None else 0,
-        "runs": runs,
+        "runs": 0,
         "walks": walks if walks is not None else 0,
         "strikeouts": strikeouts,
         "stolen_bases": stolen_bases,
@@ -604,6 +867,7 @@ def build_player_stats_from_kbo_row(
   is_home: bool,
   han_won: bool | None,
   season: int,
+  roster_map: Dict[str, int] | None = None,
 ) -> List[Dict[str, Any]]:
   """
   게임센터 박스스코어(GetBoxScoreScroll)에서 한화 선수 스탯을 추출합니다.
@@ -619,6 +883,13 @@ def build_player_stats_from_kbo_row(
       if han_idx < len(hitters) and han_idx < len(pitchers):
         parsed = _extract_hanwha_hitter_stats(hitters[han_idx], "한화 이글스")
         han_batters = [p for p in parsed if p.get("position_type") == "batter"]
+        box_payload = _fetch_get_box_score_payload(game_id, season, sr_id)
+        if box_payload:
+          tables = box_payload.get("tables") or []
+          batter_table_idx = 2 if is_home else 1
+          if batter_table_idx < len(tables):
+            lines = _parse_batter_lines_from_boxscore_table(tables[batter_table_idx])
+            _merge_batter_lines_from_get_box_score(han_batters, lines)
         _apply_hanwha_stolen_bases(han_batters, _parse_steals_from_table_etc(table_etc))
         parsed.extend(_extract_hanwha_pitcher_stats(pitchers[han_idx], "한화 이글스"))
         opp_idx = 1 - han_idx
@@ -627,7 +898,8 @@ def build_player_stats_from_kbo_row(
           game_pitchers = [p for p in parsed if p.get("position_type") == "pitcher"]
           _assign_game_hit_by_pitch(game_pitchers, hbp_thrown)
         if parsed and _player_stats_has_boxscore_detail(parsed):
-          return _enrich_with_key_player_metrics(parsed, game_id, sr_id)
+          enriched = _enrich_with_key_player_metrics(parsed, game_id, sr_id)
+          return _attach_back_numbers(enriched, roster_map or {})
 
   stats: List[Dict[str, Any]] = []
   prefix = "B" if is_home else "T"
@@ -661,10 +933,12 @@ def build_player_stats_from_kbo_row(
       continue
     seen.add(key)
     deduped.append(player)
-  return deduped
+  return _attach_back_numbers(deduped, roster_map or {})
 
 
-def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
+def normalize_match(
+  row: Dict[str, Any], season: int, roster_map: Dict[str, int] | None = None
+) -> Dict[str, Any] | None:
   home_id = (row.get("HOME_ID") or "").strip()
   away_id = (row.get("AWAY_ID") or "").strip()
   home_name = TEAM_ID_TO_NAME.get(home_id, (row.get("HOME_NM") or "").strip())
@@ -697,7 +971,9 @@ def normalize_match(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
       winner = away_name if is_home else home_name
       han_won = False
 
-  player_stats = build_player_stats_from_kbo_row(row, is_home, han_won, season)
+  player_stats = build_player_stats_from_kbo_row(
+    row, is_home, han_won, season, roster_map=roster_map
+  )
 
   g_tm = row.get("G_TM") or row.get("gameTime")
   game_start_time = None
@@ -748,20 +1024,60 @@ def upsert_matches(supabase_url: str, service_role_key: str, rows: List[Dict[str
         )
 
 
+def _load_local_env() -> None:
+  """로컬 실행 시 .env.local / .env 을 읽습니다 (이미 설정된 변수는 덮어쓰지 않음)."""
+  root = os.path.join(os.path.dirname(__file__), "..")
+  for filename in (".env.local", ".env"):
+    path = os.path.join(root, filename)
+    if not os.path.isfile(path):
+      continue
+    with open(path, encoding="utf-8") as handle:
+      for line in handle:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+          continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+          os.environ[key] = value
+
+
 def main() -> None:
+  _load_local_env()
   season = int(os.getenv("TARGET_SEASON", str(dt.date.today().year)))
   supabase_url = require_env("SUPABASE_URL")
   service_role_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
 
+  roster_path = os.getenv(
+    "HANWHA_ROSTER_JSON",
+    os.path.join(os.path.dirname(__file__), "..", "src", "data", "hanwhaRosterNumbers.json"),
+  )
+
+  roster_map = fetch_hanwha_roster_number_map()
+  print(f"Hanwha roster (initial): {len(roster_map)} players")
+
   raw_rows = fetch_schedule_from_schedule_page(season)
-  normalized = []
+  normalized: List[Dict[str, Any]] = []
   for row in raw_rows:
-    normalized_row = normalize_match(row, season)
+    normalized_row = normalize_match(row, season, roster_map=roster_map)
     if normalized_row:
       normalized.append(normalized_row)
 
   if not normalized:
     raise RuntimeError("No Hanwha games were parsed. Check endpoint or parser fields.")
+
+  extra_names = _collect_hanwha_names_from_player_stats(normalized)
+  roster_map = fetch_hanwha_roster_number_map(extra_names=extra_names)
+  for match in normalized:
+    stats = match.get("player_stats")
+    if stats:
+      _attach_back_numbers(stats, roster_map)
+
+  roster_count = write_hanwha_roster_json(roster_path, roster=roster_map)
+  print(f"Hanwha roster numbers updated: {roster_count} players -> {roster_path}")
+  if "김서현" in roster_map:
+    print(f"  e.g. 김서현 -> {roster_map['김서현']}번")
 
   upsert_matches(supabase_url, service_role_key, normalized)
   print(f"Upsert complete: {len(normalized)} matches")

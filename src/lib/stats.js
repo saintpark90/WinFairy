@@ -224,7 +224,21 @@ export const formatInningsFromOuts = (outs) => {
   return `${full}.${rem}`
 }
 
-const buildTopPlayers = (records, type) => {
+/** 타율 표기 — 소수 셋째 자리 고정 (예: 0.200) */
+export const formatBattingAvg = (value) => {
+  if (value == null || Number.isNaN(value)) return '-'
+  if (typeof value === 'number') return value.toFixed(3)
+  return String(value)
+}
+
+/** 직관 경기 타수·안타 합으로 타율 계산 (KBO 박스 타율 열은 시즌 누적값인 경우가 많음) */
+export const aggregateBattingAvgFromTotals = (hits, atBats) => {
+  if (atBats == null || atBats <= 0) return null
+  const h = hits ?? 0
+  return Number((h / atBats).toFixed(3))
+}
+
+export const buildTopPlayers = (records, type, limit = 5) => {
   const stats = new Map()
   records.forEach((record) => {
     if (!record.match || !isMatchDecided(record.match)) return
@@ -241,21 +255,20 @@ const buildTopPlayers = (records, type) => {
             games: 0,
             warTotal: 0,
             warSamples: 0,
-            avgTotal: 0,
-            battingAvgSamples: 0,
+            atBats: 0,
             opsTotal: 0,
             opsSamples: 0,
             hits: 0,
             homeRuns: 0,
             rbi: 0,
             runs: 0,
-            eraTotal: 0,
-            eraSamples: 0,
+            walks: 0,
+            earnedRuns: 0,
+            inningsOuts: 0,
             wins: 0,
             holds: 0,
             saves: 0,
             strikeouts: 0,
-            inningsOuts: 0,
           }
 
         current.games += 1
@@ -264,37 +277,40 @@ const buildTopPlayers = (records, type) => {
           current.warTotal += war
           current.warSamples += 1
         }
-        if (typeof player.batting_avg === 'number') {
-          current.avgTotal += player.batting_avg
-          current.battingAvgSamples += 1
+
+        if (type === 'batter') {
+          const ab = toNumOrNull(player.at_bats ?? player.ab)
+          const hits = toNumOrNull(player.hits ?? player.h)
+          const walks = toNumOrNull(player.walks ?? player.bb)
+          if (ab != null) current.atBats += ab
+          if (hits != null) current.hits += hits
+          if (walks != null) current.walks += walks
+          const hr = toNumOrNull(player.home_runs ?? player.hr)
+          if (hr != null) current.homeRuns += hr
+          const rbi = toNumOrNull(player.rbi)
+          if (rbi != null) current.rbi += rbi
+          const runs = toNumOrNull(player.runs ?? player.runs_scored ?? player.r)
+          if (runs != null) current.runs += runs
+          const ops = toNumOrNull(player.ops)
+          if (ops != null) {
+            current.opsTotal += ops
+            current.opsSamples += 1
+          }
+        } else {
+          const strikeouts = toNumOrNull(player.strikeouts ?? player.so)
+          if (strikeouts != null) current.strikeouts += strikeouts
+          const inningOuts = toNumOrNull(player.innings_pitched_outs)
+          if (inningOuts != null) current.inningsOuts += inningOuts
+          const er = toNumOrNull(player.earned_runs ?? player.er)
+          if (er != null) current.earnedRuns += er
+          const wins = toNumOrNull(player.wins)
+          if (wins != null) current.wins += wins
+          const holds = toNumOrNull(player.holds)
+          if (holds != null) current.holds += holds
+          const saves = toNumOrNull(player.saves)
+          if (saves != null) current.saves += saves
         }
-        const ops = toNumOrNull(player.ops)
-        if (ops != null) {
-          current.opsTotal += ops
-          current.opsSamples += 1
-        }
-        const hits = toNumOrNull(player.hits)
-        if (hits != null) current.hits += hits
-        const hr = toNumOrNull(player.home_runs)
-        if (hr != null) current.homeRuns += hr
-        const rbi = toNumOrNull(player.rbi)
-        if (rbi != null) current.rbi += rbi
-        const runs = toNumOrNull(player.runs ?? player.runs_scored ?? player.r)
-        if (runs != null) current.runs += runs
-        const strikeouts = toNumOrNull(player.strikeouts ?? player.so)
-        if (strikeouts != null) current.strikeouts += strikeouts
-        const inningOuts = toNumOrNull(player.innings_pitched_outs)
-        if (inningOuts != null) current.inningsOuts += inningOuts
-        if (typeof player.era === 'number') {
-          current.eraTotal += player.era
-          current.eraSamples += 1
-        }
-        const wins = toNumOrNull(player.wins)
-        if (wins != null) current.wins += wins
-        const holds = toNumOrNull(player.holds)
-        if (holds != null) current.holds += holds
-        const saves = toNumOrNull(player.saves)
-        if (saves != null) current.saves += saves
+
         stats.set(key, current)
       })
   })
@@ -305,14 +321,14 @@ const buildTopPlayers = (records, type) => {
       war:
         player.warSamples > 0 ? Number((player.warTotal / player.warSamples).toFixed(2)) : null,
       battingAvg:
-        player.battingAvgSamples > 0
-          ? Number((player.avgTotal / player.battingAvgSamples).toFixed(3))
+        type === 'batter'
+          ? aggregateBattingAvgFromTotals(player.hits, player.atBats)
           : null,
       ops:
         player.opsSamples > 0 ? Number((player.opsTotal / player.opsSamples).toFixed(3)) : null,
       era:
-        player.eraSamples > 0
-          ? Number((player.eraTotal / player.eraSamples).toFixed(2))
+        type === 'pitcher' && player.inningsOuts > 0
+          ? Number(((player.earnedRuns * 27) / player.inningsOuts).toFixed(2))
           : null,
     }))
     .sort((a, b) => {
@@ -330,8 +346,12 @@ const buildTopPlayers = (records, type) => {
       }
       return b.games - a.games
     })
-    .slice(0, 5)
+    .slice(0, limit)
 }
+
+/** 직관일 기준 한화 선수 전원 (TOP N·검색용) */
+export const buildAllAttendancePlayers = (records, type) =>
+  buildTopPlayers(records, type, Number.POSITIVE_INFINITY)
 
 export const buildDashboardStats = (attendanceRecords) => {
   const totalGames = attendanceRecords.length

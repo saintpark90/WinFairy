@@ -1,63 +1,4 @@
--- 기존 Supabase 프로젝트에 추가 적용 시: SQL Editor에서 이 파일 내용 실행
--- (새 저장소라면 루트 schema.sql 단일 실행으로도 포함됩니다)
-
--- 회원 프로필 (카카오 로그인 후 동기화)
-create table if not exists public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  display_name text,
-  avatar_url text,
-  email text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists idx_profiles_display on public.profiles (display_name);
-
-alter table public.profiles enable row level security;
-
-drop policy if exists "profiles select authenticated" on public.profiles;
-drop policy if exists "profiles select own" on public.profiles;
-create policy "profiles select own"
-  on public.profiles
-  for select
-  to authenticated
-  using (auth.uid() = id);
-
-drop policy if exists "profiles insert own" on public.profiles;
-create policy "profiles insert own"
-  on public.profiles
-  for insert
-  to authenticated
-  with check (auth.uid() = id);
-
-drop policy if exists "profiles update own" on public.profiles;
-create policy "profiles update own"
-  on public.profiles
-  for update
-  to authenticated
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
-
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, email)
-  values (new.id, new.email)
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row
-  execute procedure public.handle_new_user();
-
+-- 순위표: 패·무 컬럼 분리 (승패 확정 경기 기준 집계)
 create or replace function public.get_attendance_leaderboard()
 returns table (
   user_id uuid,
@@ -149,12 +90,3 @@ as $$
   having count(*) > 0
   order by wins desc, games desc;
 $$;
-
-revoke all on function public.get_attendance_leaderboard() from public;
-grant execute on function public.get_attendance_leaderboard() to authenticated;
-
--- 기존 직관만 있고 profiles 행이 없던 사용자 (선택)
--- insert into public.profiles (id)
--- select distinct ua.user_id from public.user_attendance ua
--- where not exists (select 1 from public.profiles p where p.id = ua.user_id)
--- on conflict (id) do nothing;
