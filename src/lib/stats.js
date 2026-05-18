@@ -215,12 +215,103 @@ const toNumOrNull = (value) => {
   return null
 }
 
-/** 투수 이닝: 이닝 아웃카운트 합 → 야구 표기 (예: 5.1) */
+const normalizePlayerName = (name) => String(name || '').replace(/\s+/g, '').trim()
+
+/** KBO 이닝 문자열 → 아웃카운트 (예: '5 1/3', '5.1', '5') */
+export const parseInningsPitchedToOuts = (value) => {
+  if (value == null) return null
+  const s = String(value).trim()
+  if (!s) return null
+  if (s.includes(' ')) {
+    const [whole, frac] = s.split(/\s+/, 2)
+    const wholeN = toNumOrNull(whole)
+    if (wholeN == null) return null
+    let outs = wholeN * 3
+    const f = (frac || '').trim()
+    if (f === '1/3') outs += 1
+    else if (f === '2/3') outs += 2
+    return outs
+  }
+  if (s.includes('.') && !s.includes('/')) {
+    const [whole, fracS] = s.split('.', 2)
+    const wholeN = toNumOrNull(whole)
+    if (wholeN == null) return null
+    let outs = wholeN * 3
+    if (fracS.startsWith('1')) outs += 1
+    else if (fracS.startsWith('2')) outs += 2
+    return outs
+  }
+  if (s.includes('/')) {
+    if (s === '1/3') return 1
+    if (s === '2/3') return 2
+    return null
+  }
+  const wholeN = toNumOrNull(s)
+  if (wholeN == null) return null
+  return wholeN * 3
+}
+
+const resolveInningsPitchedOuts = (player) => {
+  const outs = toNumOrNull(player?.innings_pitched_outs)
+  if (outs != null) return outs
+  const raw = player?.innings_pitched ?? player?.innings ?? player?.ip
+  if (raw == null) return null
+  return parseInningsPitchedToOuts(raw)
+}
+
+const estimateBatterGameWar = (player) => {
+  const ab = toNumOrNull(player?.at_bats ?? player?.ab) ?? 0
+  const hits = toNumOrNull(player?.hits ?? player?.h) ?? 0
+  const walks = toNumOrNull(player?.walks ?? player?.bb) ?? 0
+  if (ab <= 0 && hits <= 0 && walks <= 0) return 0
+  const hr = toNumOrNull(player?.home_runs ?? player?.hr) ?? 0
+  const doubles = toNumOrNull(player?.doubles) ?? 0
+  const triples = toNumOrNull(player?.triples) ?? 0
+  const rbi = toNumOrNull(player?.rbi) ?? 0
+  const runs = toNumOrNull(player?.runs ?? player?.runs_scored ?? player?.r) ?? 0
+  const singles = Math.max(0, hits - hr - doubles - triples)
+  const outs = Math.max(0, ab - hits)
+  const raw =
+    singles * 1.1 +
+    doubles * 2.2 +
+    triples * 3.3 +
+    hr * 4.4 +
+    walks * 0.9 +
+    rbi * 1.4 +
+    runs * 1.3 -
+    outs * 0.35
+  return Number(Math.max(0, raw).toFixed(1))
+}
+
+const estimatePitcherGameWar = (player) => {
+  const outs = resolveInningsPitchedOuts(player) ?? 0
+  const er = toNumOrNull(player?.earned_runs ?? player?.er) ?? 0
+  const strikeouts = toNumOrNull(player?.strikeouts ?? player?.so) ?? 0
+  const hitsAllowed = toNumOrNull(player?.hits_allowed) ?? 0
+  const walksAllowed = toNumOrNull(player?.walks_allowed ?? player?.bb) ?? 0
+  if (outs <= 0 && strikeouts <= 0 && er <= 0 && hitsAllowed <= 0) return 0
+  let raw =
+    outs * 0.55 + strikeouts * 0.45 - er * 1.8 - hitsAllowed * 0.35 - walksAllowed * 0.4
+  if (toNumOrNull(player?.wins)) raw += 2.5
+  if (toNumOrNull(player?.saves)) raw += 2
+  if (toNumOrNull(player?.holds)) raw += 1.2
+  return Number(Math.max(0, raw).toFixed(1))
+}
+
+const extractPlayerWar = (player) => {
+  const fromApi = toNumOrNull(player?.war ?? player?.wpa ?? player?.game_wpa ?? player?.GAME_WPA_RT)
+  if (fromApi != null) return fromApi
+  if (player?.position_type === 'pitcher') return estimatePitcherGameWar(player)
+  if (player?.position_type === 'batter') return estimateBatterGameWar(player)
+  return null
+}
+
+/** 투수 이닝: 이닝 아웃카운트 합 → 야구 표기 (예: 5.0, 5.1) */
 export const formatInningsFromOuts = (outs) => {
-  if (outs == null || !Number.isFinite(outs) || outs <= 0) return '-'
+  if (outs == null || !Number.isFinite(outs) || outs < 0) return '-'
   const full = Math.floor(outs / 3)
   const rem = outs % 3
-  if (rem === 0) return String(full)
+  if (rem === 0) return `${full}.0`
   return `${full}.${rem}`
 }
 
@@ -228,6 +319,20 @@ export const formatInningsFromOuts = (outs) => {
 export const formatBattingAvg = (value) => {
   if (value == null || Number.isNaN(value)) return '-'
   if (typeof value === 'number') return value.toFixed(3)
+  return String(value)
+}
+
+/** ERA — 0 포함 항상 소수 둘째 자리 (예: 0.00) */
+export const formatEra = (value) => {
+  if (value == null || Number.isNaN(value)) return '-'
+  if (typeof value === 'number') return value.toFixed(2)
+  return String(value)
+}
+
+/** WAR(WPA) — 소수 첫째 자리 고정 (예: 0.0) */
+export const formatWar = (value) => {
+  if (value == null || Number.isNaN(value)) return '-'
+  if (typeof value === 'number') return value.toFixed(1)
   return String(value)
 }
 
@@ -263,6 +368,7 @@ export const buildTopPlayers = (records, type, limit = 5) => {
             rbi: 0,
             runs: 0,
             walks: 0,
+            plateAppearances: 0,
             earnedRuns: 0,
             inningsOuts: 0,
             wins: 0,
@@ -272,7 +378,7 @@ export const buildTopPlayers = (records, type, limit = 5) => {
           }
 
         current.games += 1
-        const war = toNumOrNull(player.war)
+        const war = extractPlayerWar(player)
         if (war != null) {
           current.warTotal += war
           current.warSamples += 1
@@ -285,6 +391,12 @@ export const buildTopPlayers = (records, type, limit = 5) => {
           if (ab != null) current.atBats += ab
           if (hits != null) current.hits += hits
           if (walks != null) current.walks += walks
+          const pa = toNumOrNull(player.plate_appearances ?? player.pa)
+          if (pa != null) {
+            current.plateAppearances += pa
+          } else if (ab != null && walks != null) {
+            current.plateAppearances += ab + walks
+          }
           const hr = toNumOrNull(player.home_runs ?? player.hr)
           if (hr != null) current.homeRuns += hr
           const rbi = toNumOrNull(player.rbi)
@@ -299,7 +411,7 @@ export const buildTopPlayers = (records, type, limit = 5) => {
         } else {
           const strikeouts = toNumOrNull(player.strikeouts ?? player.so)
           if (strikeouts != null) current.strikeouts += strikeouts
-          const inningOuts = toNumOrNull(player.innings_pitched_outs)
+          const inningOuts = resolveInningsPitchedOuts(player)
           if (inningOuts != null) current.inningsOuts += inningOuts
           const er = toNumOrNull(player.earned_runs ?? player.er)
           if (er != null) current.earnedRuns += er
@@ -318,17 +430,21 @@ export const buildTopPlayers = (records, type, limit = 5) => {
   return [...stats.values()]
     .map((player) => ({
       ...player,
-      war:
-        player.warSamples > 0 ? Number((player.warTotal / player.warSamples).toFixed(2)) : null,
+      war: player.games > 0 ? Number(player.warTotal.toFixed(1)) : null,
       battingAvg:
         type === 'batter'
           ? aggregateBattingAvgFromTotals(player.hits, player.atBats)
           : null,
+      plateAppearances: type === 'batter' ? player.plateAppearances : null,
       ops:
         player.opsSamples > 0 ? Number((player.opsTotal / player.opsSamples).toFixed(3)) : null,
       era:
-        type === 'pitcher' && player.inningsOuts > 0
-          ? Number(((player.earnedRuns * 27) / player.inningsOuts).toFixed(2))
+        type === 'pitcher'
+          ? player.inningsOuts > 0
+            ? Number(((player.earnedRuns * 27) / player.inningsOuts).toFixed(2))
+            : player.earnedRuns === 0
+              ? 0
+              : null
           : null,
     }))
     .sort((a, b) => {
@@ -340,9 +456,9 @@ export const buildTopPlayers = (records, type, limit = 5) => {
         const bEra = b.era ?? Infinity
         if (aEra !== bEra) return aEra - bEra
       } else {
-        const aOps = a.ops ?? -Infinity
-        const bOps = b.ops ?? -Infinity
-        if (aOps !== bOps) return bOps - aOps
+        const aAvg = a.battingAvg ?? -Infinity
+        const bAvg = b.battingAvg ?? -Infinity
+        if (aAvg !== bAvg) return bAvg - aAvg
       }
       return b.games - a.games
     })

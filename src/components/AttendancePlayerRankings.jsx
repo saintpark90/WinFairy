@@ -2,18 +2,12 @@ import { useMemo, useState } from 'react'
 import {
   buildAllAttendancePlayers,
   formatBattingAvg,
+  formatEra,
   formatInningsFromOuts,
+  formatWar,
 } from '../lib/stats'
 
 const TOP_LIMIT = 10
-
-const formatStatValue = (value, digits = 3) => {
-  if (value == null || Number.isNaN(value)) return '-'
-  if (typeof value === 'number') {
-    return value.toFixed(digits).replace(/\.?0+$/, '')
-  }
-  return String(value)
-}
 
 const WarInfoHeader = () => (
   <span className="top5-header-with-tip">
@@ -48,11 +42,11 @@ function BatterTable({ players, rankByList }) {
               <WarInfoHeader />
             </th>
             <th>타율</th>
+            <th>타석</th>
             <th>안타</th>
             <th>홈런</th>
             <th>타점</th>
             <th>득점</th>
-            <th>OPS</th>
           </tr>
         </thead>
         <tbody>
@@ -65,13 +59,13 @@ function BatterTable({ players, rankByList }) {
               <tr key={player.playerName}>
                 <td>{rank}</td>
                 <td className="top5-player-name">{player.playerName}</td>
-                <td>{formatStatValue(player.war)}</td>
+                <td>{formatWar(player.war)}</td>
                 <td>{formatBattingAvg(player.battingAvg)}</td>
+                <td>{player.plateAppearances ?? 0}</td>
                 <td>{player.hits ?? 0}</td>
                 <td>{player.homeRuns ?? 0}</td>
                 <td>{player.rbi ?? 0}</td>
                 <td>{player.runs ?? 0}</td>
-                <td>{formatStatValue(player.ops)}</td>
               </tr>
             )
           })}
@@ -114,8 +108,8 @@ function PitcherTable({ players, rankByList }) {
               <tr key={player.playerName}>
                 <td>{rank}</td>
                 <td className="top5-player-name">{player.playerName}</td>
-                <td>{formatStatValue(player.war)}</td>
-                <td>{formatStatValue(player.era, 2)}</td>
+                <td>{formatWar(player.war)}</td>
+                <td>{formatEra(player.era)}</td>
                 <td>{formatInningsFromOuts(player.inningsOuts)}</td>
                 <td>{player.strikeouts ?? 0}</td>
                 <td>{player.wins ?? 0}</td>

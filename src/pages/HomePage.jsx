@@ -5,6 +5,7 @@ import {
   buildDashboardStats,
   formatBattingAvg,
   formatInningsFromOuts,
+  formatWar,
   getMatchResultKind,
   isMatchCancelled,
 } from '../lib/stats'
@@ -459,7 +460,7 @@ function HomePage({ userId, userDisplayName }) {
                         <tr key={player.playerName}>
                           <td>{index + 1}</td>
                           <td className="top5-player-name">{player.playerName}</td>
-                          <td>{formatStatValue(player.war)}</td>
+                          <td>{formatWar(player.war)}</td>
                           <td>{formatBattingAvg(player.battingAvg)}</td>
                           <td>{player.hits ?? 0}</td>
                           <td>{player.homeRuns ?? 0}</td>
@@ -503,7 +504,7 @@ function HomePage({ userId, userDisplayName }) {
                         <tr key={player.playerName}>
                           <td>{index + 1}</td>
                           <td className="top5-player-name">{player.playerName}</td>
-                          <td>{formatStatValue(player.war)}</td>
+                          <td>{formatWar(player.war)}</td>
                           <td>{formatStatValue(player.era, 2)}</td>
                           <td>{formatInningsFromOuts(player.inningsOuts)}</td>
                           <td>{player.strikeouts ?? 0}</td>
