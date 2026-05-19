@@ -79,17 +79,43 @@ const formatPodiumStat = (row, sortKey) => {
 }
 
 function RankingsUserCell({ displayName, avatarUrl }) {
-  const [imgFailed, setImgFailed] = useState(false)
+  const [imgStage, setImgStage] = useState(0)
   const name = displayName || '회원'
   const initial = name.slice(0, 1)
-  const avatarSrc = optimizeAvatarUrl(avatarUrl, RANKINGS_AVATAR_PX)
-  const showImage = Boolean(avatarSrc) && !imgFailed
+
+  const avatarCandidates = useMemo(() => {
+    const secured = normalizeAvatarUrl(avatarUrl)
+    const dpr =
+      typeof window !== 'undefined'
+        ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 2)
+        : 2
+
+    return [
+      optimizeAvatarUrl(avatarUrl, RANKINGS_AVATAR_PX, {
+        devicePixelRatio: dpr,
+        minRequestPx: RANKINGS_AVATAR_PX,
+      }),
+      optimizeAvatarUrl(avatarUrl, RANKINGS_AVATAR_PX, {
+        devicePixelRatio: 1,
+        minRequestPx: RANKINGS_AVATAR_PX,
+      }),
+      secured,
+    ].filter((candidate, index, list) => candidate && list.indexOf(candidate) === index)
+  }, [avatarUrl])
+
+  useEffect(() => {
+    setImgStage(0)
+  }, [avatarUrl])
+
+  const avatarSrc = avatarCandidates[imgStage] ?? ''
+  const showImage = Boolean(avatarSrc) && imgStage < avatarCandidates.length
 
   return (
     <span className="rankings-user-cell">
       {showImage ? (
         <span className="rankings-user-avatar-wrap">
           <img
+            key={avatarSrc}
             className="rankings-user-avatar"
             src={avatarSrc}
             alt=""
@@ -98,7 +124,7 @@ function RankingsUserCell({ displayName, avatarUrl }) {
             loading="lazy"
             decoding="async"
             referrerPolicy="no-referrer"
-            onError={() => setImgFailed(true)}
+            onError={() => setImgStage((prev) => prev + 1)}
           />
         </span>
       ) : (
