@@ -949,10 +949,10 @@ td.stat-rank-col {
 
 .calendar-score-line {
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 1.2rem;
   letter-spacing: -0.03em;
   line-height: 1.15;
-  color: #7e7e7e;
+  color: #464646;
 }
 
 .calendar-game-time {
@@ -1032,6 +1032,46 @@ td.stat-rank-col {
 .calendar-holiday-spacer {
   min-height: 0.85rem;
   margin-top: auto;
+}
+
+.calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.82rem;
+  color: #4b5563;
+}
+
+.calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calendar-legend-swatch {
+  flex-shrink: 0;
+  width: 28px;
+  height: 22px;
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.calendar-legend-swatch--home {
+  border: 2px solid #ea580c;
+}
+
+.calendar-legend-swatch--win {
+  background: #e3edff;
+  border: 1px solid #b8cff9;
+}
+
+.calendar-legend-swatch--loss {
+  background: #ffe6d6;
+  border: 1px solid #ffb38a;
 }
 
 .attendance-list-wrap {

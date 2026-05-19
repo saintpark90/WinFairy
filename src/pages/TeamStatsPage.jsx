@@ -4,15 +4,12 @@ import AttendancePlayerRankings from '../components/AttendancePlayerRankings'
 import {
   aggregateBattingAvgFromTotals,
   formatBattingAvg,
-  getMatchResultKind,
   isHanwhaWin,
   isMatchDecided,
 } from '../lib/stats'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 
 const HANWHA_TEAM_NAME = '한화이글스'
-
-const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토']
 
 const toNumOrNull = (value) => {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -21,30 +18,6 @@ const toNumOrNull = (value) => {
     return Number.isFinite(n) ? n : null
   }
   return null
-}
-
-const formatGameDate = (isoDate) => {
-  if (!isoDate) return '-'
-  const d = new Date(`${isoDate}T12:00:00`)
-  const w = WEEKDAY_KO[d.getDay()]
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${w})`
-}
-
-const matchResultShort = (match) => {
-  const kind = getMatchResultKind(match)
-  if (kind === 'win') return '승'
-  if (kind === 'loss') return '패'
-  if (kind === 'draw') return '무'
-  if (kind === 'cancelled') return '취소'
-  return '경기 전'
-}
-
-const scoreText = (match) => {
-  if (!match) return '-'
-  if (typeof match.hanwha_score !== 'number' || typeof match.opponent_score !== 'number') {
-    return '-'
-  }
-  return `${match.hanwha_score}:${match.opponent_score}`
 }
 
 const formatValue = (value, digits = 3) => {
@@ -101,7 +74,6 @@ const computeTeamPitching = (decidedMatches) => {
       m.hanwha_score === m.opponent_score,
   ).length
   const losses = games - wins - draws
-  const winRate = wins + losses > 0 ? Number(((wins / (wins + losses)) * 100).toFixed(1)) : 0
 
   const pitchers = decidedMatches.flatMap((m) =>
     (m.player_stats ?? []).filter(
@@ -138,7 +110,6 @@ const computeTeamPitching = (decidedMatches) => {
     draws,
     saves,
     holds,
-    winRate,
     hitsAllowed,
     hrAllowed,
     walks,
@@ -264,14 +235,6 @@ function TeamStatsPage({ userId }) {
     [allDecidedMatches],
   )
 
-  const attendedMatchesForTable = useMemo(() => {
-    const out = attendanceRecords
-      .map((row) => row.match)
-      .filter(Boolean)
-      .sort((a, b) => String(b.game_date).localeCompare(String(a.game_date)))
-    return out
-  }, [attendanceRecords])
-
   return (
     <section className="team-stats-page">
       <div className="card team-stats-hero">
@@ -289,8 +252,7 @@ function TeamStatsPage({ userId }) {
         ) : null}
         <h2>{HANWHA_TEAM_NAME} 팀성적</h2>
         <p className="muted">
-          투수·타자 표는 <span className="team-stats-legend-mine">내 성적</span>(직관한 경기 중 승패 확정)과{' '}
-          <span className="team-stats-legend-all">전체 성적</span>(DB에 있는 한화 전체 승패 확정 경기)을 비교합니다.
+          내가 직관한 경기에서는 선수들이 얼마나 잘했나 확인해보세요!
         </p>
       </div>
 
@@ -312,7 +274,6 @@ function TeamStatsPage({ userId }) {
                     <th>무승부</th>
                     <th>세이브</th>
                     <th>홀드</th>
-                    <th>승률</th>
                     <th>피안타</th>
                     <th>홈런</th>
                     <th>볼넷</th>
@@ -332,7 +293,6 @@ function TeamStatsPage({ userId }) {
                     <td>{teamPitchingMine.draws}</td>
                     <td>{formatValue(teamPitchingMine.saves, 0)}</td>
                     <td>{formatValue(teamPitchingMine.holds, 0)}</td>
-                    <td>{teamPitchingMine.winRate}%</td>
                     <td>{formatValue(teamPitchingMine.hitsAllowed, 0)}</td>
                     <td>{formatValue(teamPitchingMine.hrAllowed, 0)}</td>
                     <td>{formatValue(teamPitchingMine.walks, 0)}</td>
@@ -350,7 +310,6 @@ function TeamStatsPage({ userId }) {
                     <td>{teamPitchingAll.draws}</td>
                     <td>{formatValue(teamPitchingAll.saves, 0)}</td>
                     <td>{formatValue(teamPitchingAll.holds, 0)}</td>
-                    <td>{teamPitchingAll.winRate}%</td>
                     <td>{formatValue(teamPitchingAll.hitsAllowed, 0)}</td>
                     <td>{formatValue(teamPitchingAll.hrAllowed, 0)}</td>
                     <td>{formatValue(teamPitchingAll.walks, 0)}</td>
@@ -417,57 +376,6 @@ function TeamStatsPage({ userId }) {
                 </tbody>
               </table>
             </div>
-          </section>
-
-          <section className="card">
-            <h3>직관 경기 결과</h3>
-            {attendedMatchesForTable.length ? (
-              <div className="table-wrap">
-                <table className="team-stats-table team-stats-history">
-                  <thead>
-                    <tr>
-                      <th>경기날짜</th>
-                      <th>상대팀</th>
-                      <th>승/패</th>
-                      <th>스코어</th>
-                      <th>경기장</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {attendedMatchesForTable.map((match) => {
-                      const logo = getOpponentTeamLogoUrl(match.opponent_team)
-                      return (
-                        <tr key={match.id ?? `${match.game_date}-${match.opponent_team}`}>
-                          <td>{formatGameDate(match.game_date)}</td>
-                          <td>
-                            <span className="team-stats-opponent-cell">
-                              {logo ? (
-                                <img
-                                  className="team-logo-inline"
-                                  src={logo}
-                                  alt=""
-                                  loading="lazy"
-                                  decoding="async"
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none'
-                                  }}
-                                />
-                              ) : null}
-                              <span>{match.opponent_team ?? '-'}</span>
-                            </span>
-                          </td>
-                          <td>{matchResultShort(match)}</td>
-                          <td>{scoreText(match)}</td>
-                          <td>{match.stadium ?? '-'}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="muted">표시할 직관 경기 기록이 없습니다.</p>
-            )}
           </section>
 
           <AttendancePlayerRankings attendanceRecords={attendanceRecords} />

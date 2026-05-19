@@ -308,7 +308,7 @@ function HomePage({ userId, userDisplayName }) {
               <p className="win-rate-comment">{winRateComment}</p>
             </section>
             <section className="card recent-games-card">
-              <h3 className="recent-games-title">직관 최근 5경기</h3>
+              <h3 className="recent-games-title">최근 5경기 직관결과</h3>
               {recentFiveGames.length ? (
                 <div className="recent-games-scroll">
                   <div
@@ -433,7 +433,7 @@ function HomePage({ userId, userDisplayName }) {
 
           <section className="card grid2">
             <div>
-              <h3>직관일 기준 타자 TOP5</h3>
+              <h3 style={{ marginBottom: '4px' }}>직관일 기준 타자 TOP5</h3>
               <p className="top5-hint">
                 내가 직관갔던 날엔 누가 최고의 타자였을까?
               </p>
@@ -477,7 +477,7 @@ function HomePage({ userId, userDisplayName }) {
               )}
             </div>
             <div>
-              <h3>직관일 기준 투수 TOP5</h3>
+              <h3 style={{ marginBottom: '4px' }}>직관일 기준 투수 TOP5</h3>
               <p className="top5-hint">
                 내가 직관 간 날의 에이스는? 
               </p>

@@ -464,6 +464,29 @@ function AttendancePage({ userId }) {
                 ),
               )}
             </div>
+            <div className="calendar-legend" aria-label="달력 표시 안내">
+              <span className="calendar-legend-item">
+                <span
+                  className="calendar-legend-swatch calendar-legend-swatch--home"
+                  aria-hidden
+                />
+                홈경기
+              </span>
+              <span className="calendar-legend-item">
+                <span
+                  className="calendar-legend-swatch calendar-legend-swatch--win"
+                  aria-hidden
+                />
+                승리
+              </span>
+              <span className="calendar-legend-item">
+                <span
+                  className="calendar-legend-swatch calendar-legend-swatch--loss"
+                  aria-hidden
+                />
+                패배
+              </span>
+            </div>
           </>
         ) : null}
       </div>

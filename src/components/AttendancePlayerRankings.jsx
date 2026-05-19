@@ -20,7 +20,7 @@ const WarInfoHeader = () => (
     >
       ?
       <span className="top5-info-tip-bubble" role="tooltip">
-        KBO는 공식적으로 WAR를 제공하지 않습니다. 이 값은 경기 WPA 기반 대체 지표입니다.
+        KBO는 공식적으로 WAR를 제공하지 않습니다. 이 값은 경기 WPA(승리기여도) 기반 대체 지표입니다.
       </span>
     </span>
   </span>
@@ -174,10 +174,9 @@ function AttendancePlayerRankings({ attendanceRecords }) {
 
   return (
     <section className="card team-stats-player-rankings">
-      <h3>직관일 기준 선수 기록</h3>
+      <h3>선수 개인 기록</h3>
       <p className="top5-hint">
-        내가 직관한 경기(승패 확정) 기준입니다. TOP {TOP_LIMIT}에 없는 선수도 이름으로 검색할 수
-        있습니다.
+        TOP {TOP_LIMIT}에 없는 선수도 이름으로 검색할 수 있습니다.
       </p>
 
       <div className="team-stats-player-search">
@@ -205,7 +204,7 @@ function AttendancePlayerRankings({ attendanceRecords }) {
         <div className="player-search-results">
           <h4 className="player-search-results-title">검색 결과</h4>
           {!hasSearchResults ? (
-            <p className="muted">일치하는 선수가 없습니다.</p>
+            <p className="muted">일치하는 선수가 없습니다. 아마 이 선수는 내가 직관한 경기에 출전하지 않은 모양이네요!</p>
           ) : (
             <div className="player-search-results-grid">
               {searchBatters.length ? (
