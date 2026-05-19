@@ -23,6 +23,11 @@ const SORTABLE_COLUMNS = [
 
 /** 동률 시 2·3차 정렬 (방향: asc | desc) */
 const SORT_TIE_BREAKERS = {
+  games: [
+    ['wins', 'desc'],
+    ['losses', 'asc'],
+    ['draws', 'asc'],
+  ],
   wins: [
     ['losses', 'asc'],
     ['draws', 'asc'],
