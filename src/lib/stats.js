@@ -259,7 +259,7 @@ const resolveInningsPitchedOuts = (player) => {
   return parseInningsPitchedToOuts(raw)
 }
 
-const estimateBatterGameWar = (player) => {
+const estimateBatterGameWpa = (player) => {
   const ab = toNumOrNull(player?.at_bats ?? player?.ab) ?? 0
   const hits = toNumOrNull(player?.hits ?? player?.h) ?? 0
   const walks = toNumOrNull(player?.walks ?? player?.bb) ?? 0
@@ -283,7 +283,7 @@ const estimateBatterGameWar = (player) => {
   return Number(Math.max(0, raw).toFixed(1))
 }
 
-const estimatePitcherGameWar = (player) => {
+const estimatePitcherGameWpa = (player) => {
   const outs = resolveInningsPitchedOuts(player) ?? 0
   const er = toNumOrNull(player?.earned_runs ?? player?.er) ?? 0
   const strikeouts = toNumOrNull(player?.strikeouts ?? player?.so) ?? 0
@@ -298,11 +298,13 @@ const estimatePitcherGameWar = (player) => {
   return Number(Math.max(0, raw).toFixed(1))
 }
 
-const extractPlayerWar = (player) => {
-  const fromApi = toNumOrNull(player?.war ?? player?.wpa ?? player?.game_wpa ?? player?.GAME_WPA_RT)
+const extractPlayerWpa = (player) => {
+  const fromApi = toNumOrNull(
+    player?.wpa ?? player?.war ?? player?.game_wpa ?? player?.GAME_WPA_RT,
+  )
   if (fromApi != null) return fromApi
-  if (player?.position_type === 'pitcher') return estimatePitcherGameWar(player)
-  if (player?.position_type === 'batter') return estimateBatterGameWar(player)
+  if (player?.position_type === 'pitcher') return estimatePitcherGameWpa(player)
+  if (player?.position_type === 'batter') return estimateBatterGameWpa(player)
   return null
 }
 
@@ -329,8 +331,8 @@ export const formatEra = (value) => {
   return String(value)
 }
 
-/** WAR(WPA) — 소수 첫째 자리 고정 (예: 0.0) */
-export const formatWar = (value) => {
+/** WPA — 소수 첫째 자리 고정 (예: 0.0) */
+export const formatWpa = (value) => {
   if (value == null || Number.isNaN(value)) return '-'
   if (typeof value === 'number') return value.toFixed(1)
   return String(value)
@@ -358,8 +360,8 @@ export const buildTopPlayers = (records, type, limit = 5) => {
           {
             playerName: key,
             games: 0,
-            warTotal: 0,
-            warSamples: 0,
+            wpaTotal: 0,
+            wpaSamples: 0,
             atBats: 0,
             opsTotal: 0,
             opsSamples: 0,
@@ -378,10 +380,10 @@ export const buildTopPlayers = (records, type, limit = 5) => {
           }
 
         current.games += 1
-        const war = extractPlayerWar(player)
-        if (war != null) {
-          current.warTotal += war
-          current.warSamples += 1
+        const wpa = extractPlayerWpa(player)
+        if (wpa != null) {
+          current.wpaTotal += wpa
+          current.wpaSamples += 1
         }
 
         if (type === 'batter') {
@@ -430,7 +432,7 @@ export const buildTopPlayers = (records, type, limit = 5) => {
   return [...stats.values()]
     .map((player) => ({
       ...player,
-      war: player.games > 0 ? Number(player.warTotal.toFixed(1)) : null,
+      wpa: player.games > 0 ? Number(player.wpaTotal.toFixed(1)) : null,
       battingAvg:
         type === 'batter'
           ? aggregateBattingAvgFromTotals(player.hits, player.atBats)
@@ -448,9 +450,9 @@ export const buildTopPlayers = (records, type, limit = 5) => {
           : null,
     }))
     .sort((a, b) => {
-      const aWar = a.war ?? -Infinity
-      const bWar = b.war ?? -Infinity
-      if (aWar !== bWar) return bWar - aWar
+      const aWpa = a.wpa ?? -Infinity
+      const bWpa = b.wpa ?? -Infinity
+      if (aWpa !== bWpa) return bWpa - aWpa
       if (type === 'pitcher') {
         const aEra = a.era ?? Infinity
         const bEra = b.era ?? Infinity

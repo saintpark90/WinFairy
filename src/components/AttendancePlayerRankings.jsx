@@ -4,23 +4,24 @@ import {
   formatBattingAvg,
   formatEra,
   formatInningsFromOuts,
-  formatWar,
+  formatWpa,
 } from '../lib/stats'
 
 const TOP_LIMIT = 10
 
-const WarInfoHeader = () => (
+const WpaInfoHeader = () => (
   <span className="top5-header-with-tip">
-    WAR
+    WPA
     <span
       className="top5-info-tip"
       role="button"
       tabIndex={0}
-      aria-label="WAR 대체 지표 안내"
+      aria-label="WPA 안내"
     >
       ?
       <span className="top5-info-tip-bubble" role="tooltip">
-        KBO는 공식적으로 WAR를 제공하지 않습니다. 이 값은 경기 WPA(승리기여도) 기반 대체 지표입니다.
+        경기 WPA(Win Probability Added, 승리 확률 기여도)입니다. KBO 키플레이어 API의
+        경기 단위 값을 직관한 경기별로 합산합니다.
       </span>
     </span>
   </span>
@@ -39,7 +40,7 @@ function BatterTable({ players, rankByList }) {
             <th>순위</th>
             <th>선수</th>
             <th>
-              <WarInfoHeader />
+              <WpaInfoHeader />
             </th>
             <th>타율</th>
             <th>타석</th>
@@ -59,7 +60,7 @@ function BatterTable({ players, rankByList }) {
               <tr key={player.playerName}>
                 <td>{rank}</td>
                 <td className="top5-player-name">{player.playerName}</td>
-                <td>{formatWar(player.war)}</td>
+                <td>{formatWpa(player.wpa)}</td>
                 <td>{formatBattingAvg(player.battingAvg)}</td>
                 <td>{player.plateAppearances ?? 0}</td>
                 <td>{player.hits ?? 0}</td>
@@ -88,7 +89,7 @@ function PitcherTable({ players, rankByList }) {
             <th>순위</th>
             <th>선수</th>
             <th>
-              <WarInfoHeader />
+              <WpaInfoHeader />
             </th>
             <th>ERA</th>
             <th>이닝</th>
@@ -108,7 +109,7 @@ function PitcherTable({ players, rankByList }) {
               <tr key={player.playerName}>
                 <td>{rank}</td>
                 <td className="top5-player-name">{player.playerName}</td>
-                <td>{formatWar(player.war)}</td>
+                <td>{formatWpa(player.wpa)}</td>
                 <td>{formatEra(player.era)}</td>
                 <td>{formatInningsFromOuts(player.inningsOuts)}</td>
                 <td>{player.strikeouts ?? 0}</td>

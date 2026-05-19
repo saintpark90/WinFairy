@@ -676,7 +676,7 @@ def _extract_hanwha_hitter_stats(
         "player_name": player_name,
         "team_name": team_name,
         "position_type": "batter",
-        "war": None,
+        "wpa": None,
         "batting_avg": batting_avg,
         "plate_appearances": plate_appearances,
         "at_bats": at_bats if at_bats is not None else 0,
@@ -736,8 +736,8 @@ def _parse_innings_to_outs(value: str) -> int | None:
   return whole_n * 3
 
 
-def _estimate_batter_game_war(player: dict[str, Any]) -> float:
-  """키플레이어 WPA TOP5에 없을 때 박스 기록 기반 대체 지표(대략 0~30 스케일)."""
+def _estimate_batter_game_wpa(player: dict[str, Any]) -> float:
+  """키플레이어 WPA에 없을 때 박스 기록 기반 추정 WPA(대략 0~30 스케일)."""
   ab = player.get("at_bats") or 0
   hits = player.get("hits") or 0
   walks = player.get("walks") or 0
@@ -763,7 +763,7 @@ def _estimate_batter_game_war(player: dict[str, Any]) -> float:
   return round(max(0.0, raw), 1)
 
 
-def _estimate_pitcher_game_war(player: dict[str, Any]) -> float:
+def _estimate_pitcher_game_wpa(player: dict[str, Any]) -> float:
   outs = player.get("innings_pitched_outs")
   if outs is None:
     outs = _parse_innings_to_outs(str(player.get("innings_pitched") or ""))
@@ -848,7 +848,7 @@ def _extract_hanwha_pitcher_stats(
         "player_name": player_name,
         "team_name": team_name,
         "position_type": "pitcher",
-        "war": None,
+        "wpa": None,
         "era": era,
         "innings_pitched": vals[6],
         "innings_pitched_outs": innings_outs,
@@ -942,18 +942,18 @@ def _enrich_with_key_player_metrics(
       ops_val = _lookup_metric_map(hitter_ops, name)
       if ops_val is not None:
         player["ops"] = ops_val
-      # KBO 공개 API에서 경기 단위 WAR를 제공하지 않아, 키플레이어 WPA를 대체 지표로 사용.
+      # KBO 키플레이어 API의 GAME_WPA_RT(경기 WPA). 없으면 박스스코어 기반 추정치.
       wpa_val = _lookup_metric_map(hitter_wpa, name)
       if wpa_val is not None:
-        player["war"] = wpa_val
-      elif player.get("war") is None:
-        player["war"] = _estimate_batter_game_war(player)
+        player["wpa"] = wpa_val
+      elif player.get("wpa") is None:
+        player["wpa"] = _estimate_batter_game_wpa(player)
     elif player.get("position_type") == "pitcher":
       wpa_val = _lookup_metric_map(pitcher_wpa, name)
       if wpa_val is not None:
-        player["war"] = wpa_val
-      elif player.get("war") is None:
-        player["war"] = _estimate_pitcher_game_war(player)
+        player["wpa"] = wpa_val
+      elif player.get("wpa") is None:
+        player["wpa"] = _estimate_pitcher_game_wpa(player)
   return players
 
 
