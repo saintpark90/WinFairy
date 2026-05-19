@@ -779,7 +779,7 @@ span.profile-avatar-large.user-avatar-fallback {
 }
 
 .recent-game-colhead--end {
-  text-align: right;
+  text-align: center;
 }
 
 .recent-game-datetime {
@@ -808,6 +808,7 @@ span.profile-avatar-large.user-avatar-fallback {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  text-align: center;
 }
 
 .recent-game-opponent {
@@ -828,8 +829,9 @@ span.profile-avatar-large.user-avatar-fallback {
   font-weight: 600;
   color: #374151;
   line-height: 1.2;
-  min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  max-width: 4.25em;
+  text-align: left;
 }
 
 .recent-game-logo {
@@ -2604,21 +2606,22 @@ button {
 
   .recent-games-scroll {
     --recent-game-cols:
-      minmax(0, 1.1fr)
-      minmax(0, 0.38fr)
-      minmax(0, 1.15fr)
-      minmax(0, 0.4fr)
-      minmax(0, 0.38fr);
+      minmax(0, 1.05fr)
+      minmax(0, 0.42fr)
+      minmax(0, 0.72fr)
+      minmax(0, 0.42fr)
+      minmax(0, 0.42fr);
   }
 
-  .recent-game-line {
+  .recent-game-line,
+  .recent-game-line--header {
     gap: 4px 5px;
-    font-size: 0.72rem;
+    font-size: 0.9rem;
     padding: 8px 0;
+    text-align: center;
   }
 
   .recent-game-line--header {
-    font-size: 0.68rem;
     padding: 4px 0 8px;
   }
 
@@ -2630,8 +2633,14 @@ button {
     display: inline;
   }
 
-  .recent-game-datetime {
-    font-size: 0.68rem;
+  .recent-game-datetime,
+  .recent-game-stadium,
+  .recent-game-opponent-name,
+  .recent-game-score,
+  .recent-game-result,
+  .recent-game-colhead {
+    font-size: 0.9rem;
+    text-align: center;
   }
 
   .recent-game-logo {
@@ -2652,17 +2661,12 @@ button {
   }
 
   .recent-game-opponent-name {
-    font-size: 0.72rem;
-    text-align: center;
-    flex: 1 1 auto;
-  }
-
-  .recent-game-score {
-    font-size: 0.75rem;
+    flex: 0 1 auto;
+    max-width: 3.75em;
+    text-align: left;
   }
 
   .recent-game-result {
-    font-size: 0.68rem;
     padding: 2px 3px;
   }
 
