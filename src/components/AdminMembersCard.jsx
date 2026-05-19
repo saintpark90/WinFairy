@@ -79,6 +79,7 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
 
   const sortedMembers = useMemo(() => {
     const rank = (member) => {
+      if (member.is_blocked) return 3
       if (member.is_super_admin) return 0
       if (member.is_admin) return 1
       return 2
