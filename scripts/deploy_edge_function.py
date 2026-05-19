@@ -17,9 +17,25 @@ PROJECT_REF = "pxienajdgtrzbfdiwbsh"
 FUNCTION_NAME = "sync-leaderboard"
 
 
-def main() -> None:
+def _read_access_token() -> str:
   _load_local_env()
   token = os.getenv("SUPABASE_ACCESS_TOKEN")
+  if token:
+    return token
+
+  env_path = os.path.join(os.path.dirname(__file__), "..", ".env.local")
+  if os.path.isfile(env_path):
+    with open(env_path, encoding="utf-8") as handle:
+      for line in handle:
+        line = line.strip()
+        if line.startswith("SUPABASE_ACCESS_TOKEN="):
+          return line.partition("=")[2].strip().strip('"').strip("'")
+
+  return ""
+
+
+def main() -> None:
+  token = _read_access_token()
   if not token:
     print(
       "SUPABASE_ACCESS_TOKEN 환경 변수가 필요합니다.\n"

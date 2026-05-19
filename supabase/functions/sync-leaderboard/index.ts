@@ -1,6 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
+// 순위 Storage JSON 갱신 (가입·직관 저장 시 클라이언트에서 호출)
+
 const HANWHA = "한화";
 const BUCKET = "public-data";
 const OBJECT_PATH = "leaderboard.json";
