@@ -11,13 +11,33 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100svh;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: var(--login-viewport-height, 100svh);
+  max-height: var(--login-viewport-height, 100svh);
+  min-height: var(--login-viewport-height, 100svh);
+  margin: 0;
+  overflow: hidden;
+  padding: 18px;
 }
 
 .app-shell.login-shell {
   max-width: none;
+}
+
+body.login-viewport-locked {
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
   width: 100%;
-  min-height: 100svh;
+  height: var(--login-viewport-height, 100svh);
+  overscroll-behavior: none;
+}
+
+html.login-viewport-locked-root {
+  overflow: hidden;
+  height: var(--login-viewport-height, 100svh);
 }
 
 .login-theme-toggle-wrap {
@@ -1822,11 +1842,9 @@ button {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  /* svh: 키보드가 올라와도 프레임 크기 유지 (dvh는 키보드에 따라 줄어듦) */
-  aspect-ratio: 9 / 16;
-  width: min(560px, calc((min(94svh, 100svh - 24px)) * 9 / 16), calc(100vw - 32px));
-  height: min(94svh, calc((100vw - 32px) * 16 / 9));
-  max-height: min(94svh, calc((100vw - 32px) * 16 / 9));
+  width: var(--login-frame-width, min(560px, calc(100vw - 32px)));
+  height: var(--login-frame-height, min(94svh, calc((100vw - 32px) * 16 / 9)));
+  max-height: var(--login-frame-height, min(94svh, calc((100vw - 32px) * 16 / 9)));
   padding: clamp(20px, 4.5vw, 36px) clamp(16px, 4.5vw, 28px);
   border-radius: 20px;
   background: linear-gradient(165deg, #fffdfb 0%, #fff4e6 45%, #ffe8d4 100%);
@@ -2664,18 +2682,13 @@ button {
   }
 
   .app-shell.login-shell {
-    height: 100svh;
-    max-height: 100svh;
-    min-height: 100svh;
     padding: 12px;
-    overflow: hidden;
-    justify-content: center;
   }
 
   .login-screen {
-    width: min(calc(100vw - 24px), calc(94svh * 9 / 16));
-    height: min(94svh, calc((100vw - 24px) * 16 / 9));
-    max-height: 94svh;
+    width: var(--login-frame-width, min(calc(100vw - 24px), calc(94svh * 9 / 16)));
+    height: var(--login-frame-height, min(94svh, calc((100vw - 24px) * 16 / 9)));
+    max-height: var(--login-frame-height, 94svh);
   }
 
   .app-tail.login-tail {

@@ -5,6 +5,7 @@ import { supabase, supabaseConfigError } from './lib/supabase'
 import { BLOCKED_LOGIN_MESSAGE } from './lib/admin'
 import { refreshLeaderboardCache } from './lib/refreshLeaderboard'
 import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
+import { resetLoginScroll, useLoginViewportLock } from './lib/useLoginViewportLock'
 import AppTail from './components/AppTail'
 import ThemeToggle from './components/ThemeToggle'
 import HomePage from './pages/HomePage'
@@ -25,6 +26,8 @@ function LoginScreen({
   authError,
   onSubmit,
 }) {
+  useLoginViewportLock(true)
+
   return (
     <div className="app-shell login-shell">
       <div className="login-screen">
@@ -55,6 +58,7 @@ function LoginScreen({
                   setParticipationCode(e.target.value)
                   setParticipationCodeError('')
                 }}
+                onFocus={resetLoginScroll}
               />
             </div>
             {participationCodeError ? (
