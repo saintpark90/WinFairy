@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { refreshLeaderboardCache } from '../lib/refreshLeaderboard'
-import { optimizeAvatarUrl } from '../lib/userDisplay'
+import { normalizeAvatarUrl, optimizeAvatarUrl } from '../lib/userDisplay'
 import { supabase } from '../lib/supabase'
 
 const ADMIN_AVATAR_PX = 32
@@ -13,28 +13,53 @@ function formatMemberDate(value) {
 }
 
 function AdminMemberAvatar({ displayName, avatarUrl }) {
-  const [imgFailed, setImgFailed] = useState(false)
-  const src = optimizeAvatarUrl(avatarUrl, ADMIN_AVATAR_PX, {
-    minRequestPx: ADMIN_AVATAR_PX,
-  })
-  const initial = (displayName || '회원').slice(0, 1)
+  const [imgStage, setImgStage] = useState(0)
+  const name = displayName || '회원'
+  const initial = name.slice(0, 1)
 
-  useEffect(() => {
-    setImgFailed(false)
+  const avatarCandidates = useMemo(() => {
+    const secured = normalizeAvatarUrl(avatarUrl)
+    const dpr =
+      typeof window !== 'undefined'
+        ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 2)
+        : 2
+
+    return [
+      optimizeAvatarUrl(avatarUrl, ADMIN_AVATAR_PX, {
+        devicePixelRatio: dpr,
+        minRequestPx: 64,
+      }),
+      optimizeAvatarUrl(avatarUrl, ADMIN_AVATAR_PX, {
+        devicePixelRatio: 1,
+        minRequestPx: 64,
+      }),
+      secured,
+    ].filter((candidate, index, list) => candidate && list.indexOf(candidate) === index)
   }, [avatarUrl])
 
-  if (src && !imgFailed) {
+  useEffect(() => {
+    setImgStage(0)
+  }, [avatarUrl])
+
+  const avatarSrc = avatarCandidates[imgStage] ?? ''
+  const showImage = Boolean(avatarSrc) && imgStage < avatarCandidates.length
+
+  if (showImage) {
     return (
-      <img
-        className="admin-member-avatar"
-        src={src}
-        alt=""
-        width={ADMIN_AVATAR_PX}
-        height={ADMIN_AVATAR_PX}
-        decoding="async"
-        referrerPolicy="no-referrer"
-        onError={() => setImgFailed(true)}
-      />
+      <span className="admin-member-avatar-wrap">
+        <img
+          key={avatarSrc}
+          className="admin-member-avatar"
+          src={avatarSrc}
+          alt=""
+          width={ADMIN_AVATAR_PX}
+          height={ADMIN_AVATAR_PX}
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImgStage((prev) => prev + 1)}
+        />
+      </span>
     )
   }
 

@@ -439,6 +439,11 @@ html[data-theme='dark'] body {
   border-color: #475569;
 }
 
+[data-theme='dark'] .admin-member-avatar-wrap {
+  background: #243044;
+  border-color: #475569;
+}
+
 [data-theme='dark'] .admin-member-avatar-fallback,
 [data-theme='dark'] .admin-member-badge {
   background: #431407;

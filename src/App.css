@@ -405,6 +405,27 @@ span.profile-avatar-large.user-avatar-fallback {
   min-width: 0;
 }
 
+.admin-member-avatar-wrap {
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  line-height: 0;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.admin-member-avatar-wrap .admin-member-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  object-fit: cover;
+}
+
 .admin-member-avatar {
   width: 32px;
   height: 32px;
