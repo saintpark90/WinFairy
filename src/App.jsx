@@ -119,7 +119,7 @@ function AuthenticatedApp({ session, userDisplayName, navClassName, signOut }) {
             path="/"
             element={<HomePage userId={session.user.id} userDisplayName={userDisplayName} />}
           />
-          <Route path="/rankings" element={<RankingsPage userId={session.user.id} />} />
+          <Route path="/rankings" element={<RankingsPage user={session.user} />} />
           <Route path="/team-stats" element={<TeamStatsPage userId={session.user.id} />} />
           <Route path="/attendance" element={<AttendancePage userId={session.user.id} />} />
           <Route

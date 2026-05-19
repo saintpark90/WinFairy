@@ -161,7 +161,15 @@ html[data-theme='dark'] body {
 }
 
 [data-theme='dark'] .rankings-podium-avatar-name {
-  color: #f1f5f9;
+  color: #f3f4f6;
+}
+
+[data-theme='dark'] .rankings-name-admin-action {
+  color: #fb923c;
+}
+
+[data-theme='dark'] .rankings-name-admin-action:hover:not(:disabled) {
+  color: #fdba74;
 }
 
 [data-theme='dark'] .top5-table th,

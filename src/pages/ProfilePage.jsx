@@ -43,7 +43,9 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
   const avatarUrl = resolveAvatarUrl(user, profileRow)
   const profileAvatarSrc = useRawAvatar
     ? normalizeAvatarUrl(avatarUrl)
-    : optimizeAvatarUrl(avatarUrl, PROFILE_AVATAR_PX)
+    : optimizeAvatarUrl(avatarUrl, PROFILE_AVATAR_PX, {
+        minRequestPx: PROFILE_AVATAR_PX,
+      })
   const showAvatar = Boolean(profileAvatarSrc) && !imgFailed
   const email = user?.email ?? ''
   const [deleting, setDeleting] = useState(false)
