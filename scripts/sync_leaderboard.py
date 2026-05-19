@@ -119,6 +119,8 @@ def build_leaderboard_rows(
   for row in attendance:
     user_id = row["user_id"]
     match = row.get("matches")
+    if not is_match_decided(match):
+      continue
     bucket = stats_by_user[user_id]
     bucket["games"] += 1
 

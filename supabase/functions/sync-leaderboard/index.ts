@@ -123,6 +123,8 @@ function buildLeaderboardRows(
 
   for (const row of attendance) {
     const match = row.matches ?? null;
+    if (!isMatchDecided(match)) continue;
+
     const bucket = statsByUser.get(row.user_id) ?? {
       games: 0,
       wins: 0,

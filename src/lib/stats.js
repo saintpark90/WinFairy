@@ -472,9 +472,9 @@ export const buildAllAttendancePlayers = (records, type) =>
   buildTopPlayers(records, type, Number.POSITIVE_INFINITY)
 
 export const buildDashboardStats = (attendanceRecords) => {
-  const totalGames = attendanceRecords.length
   const decidedRecords = attendanceRecords.filter((row) => isMatchDecided(row.match))
-  const decidedCount = decidedRecords.length
+  const totalGames = decidedRecords.length
+  const plannedGames = attendanceRecords.length - totalGames
   const wins = decidedRecords.filter((row) => isHanwhaWin(row.match)).length
   const draws = decidedRecords.filter((row) => isDraw(row.match)).length
   const losses = decidedRecords.filter((row) => isHanwhaLoss(row.match)).length
@@ -484,8 +484,7 @@ export const buildDashboardStats = (attendanceRecords) => {
   return {
     summary: {
       totalGames,
-      decidedGames: decidedCount,
-      undecidedGames: totalGames - decidedCount,
+      plannedGames,
       wins,
       losses,
       draws,

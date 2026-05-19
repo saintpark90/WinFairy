@@ -143,7 +143,15 @@ as $$
     p.id as user_id,
     coalesce(nullif(trim(both from p.display_name), ''), '회원'::text) as display_name,
     p.avatar_url,
-    count(*)::bigint as games,
+    count(
+      case
+        when m.id is null then null
+        when m.game_status ~ '취소|노게임|무효|제외' then null
+        when (m.winner_team is not null and trim(both from m.winner_team) <> '')
+          or (m.hanwha_score is not null and m.opponent_score is not null) then 1
+        else null
+      end
+    )::bigint as games,
     sum(
       case
         when m.winner_team is not null and trim(both from m.winner_team) <> ''
@@ -211,7 +219,15 @@ as $$
   inner join public.user_attendance ua on ua.user_id = p.id
   left join public.matches m on m.id = ua.match_id
   group by p.id, p.display_name, p.avatar_url
-  having count(*) > 0
+  having count(
+    case
+      when m.id is null then null
+      when m.game_status ~ '취소|노게임|무효|제외' then null
+      when (m.winner_team is not null and trim(both from m.winner_team) <> '')
+        or (m.hanwha_score is not null and m.opponent_score is not null) then 1
+      else null
+    end
+  ) > 0
   order by wins desc, games desc;
 $$;
 

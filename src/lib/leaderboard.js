@@ -71,15 +71,19 @@ export async function fetchAttendanceLeaderboard(supabase) {
 
   for (const row of storageRows) {
     const existing = byUserId.get(row.user_id)
-    byUserId.set(
-      row.user_id,
-      normalizeLeaderboardRow({
-        ...existing,
-        ...row,
-        losses: row.losses ?? existing?.losses ?? 0,
-        draws: row.draws ?? existing?.draws ?? 0,
-      }),
-    )
+    if (existing) {
+      // RPC가 집계 기준(경기·승·승률·패·무). Storage는 RPC에 없는 회원 보완용.
+      byUserId.set(
+        row.user_id,
+        normalizeLeaderboardRow({
+          ...existing,
+          avatar_url: row.avatar_url ?? existing.avatar_url,
+          display_name: row.display_name ?? existing.display_name,
+        }),
+      )
+    } else {
+      byUserId.set(row.user_id, normalizeLeaderboardRow(row))
+    }
   }
 
   const data = [...byUserId.values()].sort(

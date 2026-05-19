@@ -1,64 +1,7 @@
--- 기존 Supabase 프로젝트에 추가 적용 시: SQL Editor에서 이 파일 내용 실행
--- (새 저장소라면 루트 schema.sql 단일 실행으로도 포함됩니다)
+-- 순위 '경기' 집계: 승패 확정 경기만 포함 (경기 전·예정 직관 제외)
+drop function if exists public.get_attendance_leaderboard();
 
--- 회원 프로필 (카카오 로그인 후 동기화)
-create table if not exists public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  display_name text,
-  avatar_url text,
-  email text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists idx_profiles_display on public.profiles (display_name);
-
-alter table public.profiles enable row level security;
-
-drop policy if exists "profiles select authenticated" on public.profiles;
-drop policy if exists "profiles select own" on public.profiles;
-create policy "profiles select own"
-  on public.profiles
-  for select
-  to authenticated
-  using (auth.uid() = id);
-
-drop policy if exists "profiles insert own" on public.profiles;
-create policy "profiles insert own"
-  on public.profiles
-  for insert
-  to authenticated
-  with check (auth.uid() = id);
-
-drop policy if exists "profiles update own" on public.profiles;
-create policy "profiles update own"
-  on public.profiles
-  for update
-  to authenticated
-  using (auth.uid() = id)
-  with check (auth.uid() = id);
-
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, email)
-  values (new.id, new.email)
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row
-  execute procedure public.handle_new_user();
-
-create or replace function public.get_attendance_leaderboard()
+create function public.get_attendance_leaderboard()
 returns table (
   user_id uuid,
   display_name text,
@@ -78,13 +21,13 @@ as $$
     p.id as user_id,
     coalesce(nullif(trim(both from p.display_name), ''), '회원'::text) as display_name,
     p.avatar_url,
-    count(
+    sum(
       case
-        when m.id is null then null
-        when m.game_status ~ '취소|노게임|무효|제외' then null
+        when m.id is null then 0
+        when m.game_status ~ '취소|노게임|무효|제외' then 0
         when (m.winner_team is not null and trim(both from m.winner_team) <> '')
           or (m.hanwha_score is not null and m.opponent_score is not null) then 1
-        else null
+        else 0
       end
     )::bigint as games,
     sum(
@@ -154,13 +97,13 @@ as $$
   inner join public.user_attendance ua on ua.user_id = p.id
   left join public.matches m on m.id = ua.match_id
   group by p.id, p.display_name, p.avatar_url
-  having count(
+  having sum(
     case
-      when m.id is null then null
-      when m.game_status ~ '취소|노게임|무효|제외' then null
+      when m.id is null then 0
+      when m.game_status ~ '취소|노게임|무효|제외' then 0
       when (m.winner_team is not null and trim(both from m.winner_team) <> '')
         or (m.hanwha_score is not null and m.opponent_score is not null) then 1
-      else null
+      else 0
     end
   ) > 0
   order by wins desc, games desc;
@@ -168,9 +111,3 @@ $$;
 
 revoke all on function public.get_attendance_leaderboard() from public;
 grant execute on function public.get_attendance_leaderboard() to authenticated;
-
--- 기존 직관만 있고 profiles 행이 없던 사용자 (선택)
--- insert into public.profiles (id)
--- select distinct ua.user_id from public.user_attendance ua
--- where not exists (select 1 from public.profiles p where p.id = ua.user_id)
--- on conflict (id) do nothing;
