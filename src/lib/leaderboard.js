@@ -7,33 +7,94 @@ export const getLeaderboardStorageUrl = () => {
   return `${supabaseUrl}/storage/v1/object/public/${LEADERBOARD_STORAGE_PATH}`
 }
 
-/** Storage JSON(패·무 포함) 우선, 실패 시 RPC 결과 사용 */
-export async function fetchAttendanceLeaderboard(supabase) {
+async function fetchStorageLeaderboard() {
   const storageUrl = getLeaderboardStorageUrl()
-  if (storageUrl) {
-    try {
-      const response = await fetch(`${storageUrl}?t=${Date.now()}`, {
-        cache: 'no-store',
-      })
-      if (response.ok) {
-        const data = await response.json()
-        if (Array.isArray(data) && data.length) {
-          return { data, error: null, source: 'storage' }
-        }
+  if (!storageUrl) return []
+
+  try {
+    const response = await fetch(`${storageUrl}?t=${Date.now()}`, {
+      cache: 'no-store',
+    })
+    if (!response.ok) return []
+    const data = await response.json()
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
+function normalizeLeaderboardRow(row) {
+  return {
+    ...row,
+    games: Number(row.games ?? 0),
+    wins: Number(row.wins ?? 0),
+    losses: Number(row.losses ?? 0),
+    draws: Number(row.draws ?? 0),
+    win_rate: Number(row.win_rate ?? 0),
+  }
+}
+
+/**
+ * RPC(전체 회원) + Storage JSON(패·무 포함)을 병합합니다.
+ * Storage만 쓰면 KBO 동기화 전에 가입한 회원이 누락될 수 있습니다.
+ */
+export async function fetchAttendanceLeaderboard(supabase) {
+  const [storageRows, rpcResult] = await Promise.all([
+    fetchStorageLeaderboard(),
+    supabase
+      ? supabase.rpc('get_attendance_leaderboard')
+      : Promise.resolve({ data: null, error: null }),
+  ])
+
+  const { data: rpcRows, error: rpcError } = rpcResult
+
+  if (!storageRows.length && rpcError) {
+    return { data: null, error: rpcError, source: null }
+  }
+
+  if (!storageRows.length && !rpcRows?.length) {
+    if (!supabase) {
+      return {
+        data: null,
+        error: new Error('Supabase 환경변수가 비어 있습니다.'),
+        source: null,
       }
-    } catch {
-      // RPC fallback below
     }
+    return { data: [], error: null, source: 'rpc' }
   }
 
-  if (!supabase) {
-    return {
-      data: null,
-      error: new Error('Supabase 환경변수가 비어 있습니다.'),
-      source: null,
-    }
+  const byUserId = new Map()
+
+  for (const row of rpcRows ?? []) {
+    byUserId.set(row.user_id, normalizeLeaderboardRow(row))
   }
 
-  const { data, error } = await supabase.rpc('get_attendance_leaderboard')
-  return { data, error, source: 'rpc' }
+  for (const row of storageRows) {
+    const existing = byUserId.get(row.user_id)
+    byUserId.set(
+      row.user_id,
+      normalizeLeaderboardRow({
+        ...existing,
+        ...row,
+        losses: row.losses ?? existing?.losses ?? 0,
+        draws: row.draws ?? existing?.draws ?? 0,
+      }),
+    )
+  }
+
+  const data = [...byUserId.values()].sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      b.games - a.games ||
+      String(a.display_name).localeCompare(String(b.display_name), 'ko'),
+  )
+
+  const source =
+    storageRows.length && rpcRows?.length
+      ? 'merged'
+      : storageRows.length
+        ? 'storage'
+        : 'rpc'
+
+  return { data, error: null, source }
 }
