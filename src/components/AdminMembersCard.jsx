@@ -235,6 +235,8 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
     void refreshLeaderboardCache(supabase)
   }
 
+  const tableColSpan = isSuperAdmin ? 7 : 6
+
   return (
     <section className="card admin-members-card">
       <div className="admin-members-header">
@@ -277,7 +279,7 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
                 <th scope="col">이메일</th>
                 <th scope="col">직관</th>
                 <th scope="col">상태</th>
-                <th scope="col">관리자</th>
+                {isSuperAdmin ? <th scope="col">관리자</th> : null}
                 <th scope="col">가입일</th>
                 <th scope="col">관리</th>
               </tr>
@@ -285,7 +287,7 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
             <tbody>
               {sortedMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="admin-members-empty">
+                  <td colSpan={tableColSpan} className="admin-members-empty">
                     등록된 회원이 없습니다.
                   </td>
                 </tr>
@@ -298,8 +300,10 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
                   const isAdminChecked = isSuperAdminRow || Boolean(member.is_admin)
                   const rowClass = [
                     isBlocked ? 'admin-members-row--blocked' : '',
-                    isSuperAdminRow ? 'admin-members-row--super-admin' : '',
-                    member.is_admin && !isSuperAdminRow ? 'admin-members-row--admin' : '',
+                    isSuperAdmin && isSuperAdminRow ? 'admin-members-row--super-admin' : '',
+                    isSuperAdmin && member.is_admin && !isSuperAdminRow
+                      ? 'admin-members-row--admin'
+                      : '',
                   ]
                     .filter(Boolean)
                     .join(' ')
@@ -316,7 +320,7 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
                           {isSelf ? (
                             <span className="admin-member-badge">나</span>
                           ) : null}
-                          {isSuperAdminRow ? (
+                          {isSuperAdmin && isSuperAdminRow ? (
                             <span className="admin-member-badge admin-member-badge--super">
                               슈퍼
                             </span>
@@ -336,26 +340,27 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
                           {isBlocked ? '차단' : '정상'}
                         </span>
                       </td>
-                      <td className="admin-member-admin-cell">
-                        <label className="admin-member-admin-check">
-                          <input
-                            type="checkbox"
-                            checked={isAdminChecked}
-                            disabled={
-                              !isSuperAdmin ||
-                              isSuperAdminRow ||
-                              Boolean(actingId) ||
-                              isSelf
-                            }
-                            onChange={(event) =>
-                              void handleAdminToggle(member, event.target.checked)
-                            }
-                          />
-                          <span className="admin-member-admin-check-label">
-                            {isSuperAdminRow ? '슈퍼관리자' : isAdminChecked ? '관리자' : ''}
-                          </span>
-                        </label>
-                      </td>
+                      {isSuperAdmin ? (
+                        <td className="admin-member-admin-cell">
+                          <label className="admin-member-admin-check">
+                            <input
+                              type="checkbox"
+                              checked={isAdminChecked}
+                              disabled={
+                                isSuperAdminRow ||
+                                Boolean(actingId) ||
+                                isSelf
+                              }
+                              onChange={(event) =>
+                                void handleAdminToggle(member, event.target.checked)
+                              }
+                            />
+                            <span className="admin-member-admin-check-label">
+                              {isSuperAdminRow ? '슈퍼관리자' : isAdminChecked ? '관리자' : ''}
+                            </span>
+                          </label>
+                        </td>
+                      ) : null}
                       <td>{formatMemberDate(member.created_at)}</td>
                       <td>
                         {isSelf ? (
