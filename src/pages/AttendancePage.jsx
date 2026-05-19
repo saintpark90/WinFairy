@@ -5,6 +5,9 @@ import { formatStadiumShort } from '../lib/stadiumShort'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 import { getKoreanDayMark, isKoreanNonRedDayMark, isKoreanPublicHolidayMark } from '../lib/koreanHolidays'
 import { getMatchResultKind, isMatchCancelled, isMatchDecided } from '../lib/stats'
+import { canAccessMemberAdmin } from '../lib/admin'
+import AttendanceViewersModal from '../components/AttendanceViewersModal'
+import CalendarContextMenu from '../components/CalendarContextMenu'
 
 const DAY_LABELS_MON = ['월', '화', '수', '목', '금', '토', '일']
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토']
@@ -81,13 +84,16 @@ const scoreTextForList = (match) => {
   return '–'
 }
 
-function AttendancePage({ userId }) {
+function AttendancePage({ userId, user }) {
   const [calendarLoading, setCalendarLoading] = useState(true)
   const [calendarError, setCalendarError] = useState('')
   const [matches, setMatches] = useState([])
   const [viewMonth, setViewMonth] = useState(localYearMonth)
   const [attendedSet, setAttendedSet] = useState(() => new Set())
   const [actionMessage, setActionMessage] = useState('')
+  const [isAppAdmin, setIsAppAdmin] = useState(false)
+  const [contextMenu, setContextMenu] = useState(null)
+  const [viewersModalDate, setViewersModalDate] = useState(null)
   const savingDateRef = useRef(new Set())
   const calendarTouchStartRef = useRef(null)
 
@@ -147,6 +153,31 @@ function AttendancePage({ userId }) {
       cancelled = true
     }
   }, [userId])
+
+  useEffect(() => {
+    if (!supabase || !user) {
+      setIsAppAdmin(false)
+      return undefined
+    }
+
+    let cancelled = false
+    ;(async () => {
+      const [{ data: adminFlag, error: adminError }, { data: profile }] = await Promise.all([
+        supabase.rpc('is_app_admin'),
+        supabase.from('profiles').select('is_admin').eq('id', user.id).maybeSingle(),
+      ])
+      if (cancelled) return
+      if (adminError) {
+        setIsAppAdmin(canAccessMemberAdmin(user, null))
+        return
+      }
+      setIsAppAdmin(Boolean(adminFlag) || canAccessMemberAdmin(user, profile))
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   const matchesByDate = useMemo(() => {
     const map = new Map()
@@ -327,6 +358,22 @@ function AttendancePage({ userId }) {
     calendarTouchStartRef.current = null
   }
 
+  const openViewersForDate = (dateText) => {
+    setViewersModalDate(dateText)
+    setContextMenu(null)
+  }
+
+  const handleCalendarCellContextMenu = (event, dateText) => {
+    if (!isAppAdmin) return
+    event.preventDefault()
+    event.stopPropagation()
+    setContextMenu({ x: event.clientX, y: event.clientY, dateText })
+  }
+
+  const viewersModalMatch = viewersModalDate
+    ? matchesByDate.get(viewersModalDate) ?? null
+    : null
+
   return (
     <section className="card form-card attendance-page">
       <h2>직관일 입력</h2>
@@ -335,6 +382,11 @@ function AttendancePage({ userId }) {
         다시 누르면 취소됩니다. 좌우 화살표·키보드 방향키(← →), 모바일에서는 달력을
         좌우로 밀어 달을 옮길 수 있습니다.
       </p>
+      {isAppAdmin ? (
+        <p className="attendance-admin-hint">
+          관리자: 날짜 카드를 우클릭하면 해당 날짜의 직관 회원을 확인·추가할 수 있습니다.
+        </p>
+      ) : null}
 
       <div className="calendar-wrap">
         <div className="calendar-head calendar-head--nav">
@@ -413,6 +465,7 @@ function AttendancePage({ userId }) {
                       .filter(Boolean)
                       .join(' ')}
                     onClick={() => toggleAttendanceForDate(cell.dateText)}
+                    onContextMenu={(event) => handleCalendarCellContextMenu(event, cell.dateText)}
                   >
                     <div className="calendar-cell-head">
                       <span
@@ -644,6 +697,29 @@ function AttendancePage({ userId }) {
       ) : null}
 
       {actionMessage ? <p className="error">{actionMessage}</p> : null}
+
+      {isAppAdmin && contextMenu ? (
+        <CalendarContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            {
+              id: 'view-attendees',
+              label: '직관러 확인',
+              onSelect: () => openViewersForDate(contextMenu.dateText),
+            },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
+      ) : null}
+
+      {isAppAdmin && viewersModalDate ? (
+        <AttendanceViewersModal
+          dateText={viewersModalDate}
+          match={viewersModalMatch}
+          onClose={() => setViewersModalDate(null)}
+        />
+      ) : null}
     </section>
   )
 }

@@ -641,6 +641,241 @@ span.profile-avatar-large.user-avatar-fallback {
   padding: 24px 12px !important;
 }
 
+.calendar-context-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 168px;
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+}
+
+.calendar-context-menu-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #111827;
+  font-size: 0.92rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.calendar-context-menu-item:hover,
+.calendar-context-menu-item:focus-visible {
+  background: #fff7ed;
+  color: #c2410c;
+  outline: none;
+}
+
+.attendance-viewers-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.attendance-viewers-modal {
+  width: min(100%, 480px);
+  max-height: min(88vh, 720px);
+  overflow: auto;
+  padding: 20px 18px 18px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+}
+
+.attendance-viewers-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.attendance-viewers-header h3 {
+  margin: 0 0 4px;
+  font-size: 1.15rem;
+}
+
+.attendance-viewers-subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.attendance-viewers-close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.attendance-viewers-close:hover {
+  background: #e5e7eb;
+}
+
+.attendance-viewers-search {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.attendance-viewers-search-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.attendance-viewers-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+.attendance-viewers-search-hint {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+}
+
+.attendance-viewers-search-results,
+.attendance-viewers-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attendance-viewers-search-results li + li,
+.attendance-viewers-list li + li {
+  margin-top: 8px;
+}
+
+.attendance-viewer-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.attendance-viewer-row--static {
+  padding: 4px 0;
+}
+
+.attendance-viewer-avatar-wrap,
+.attendance-viewer-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.attendance-viewer-avatar-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+}
+
+.attendance-viewer-avatar {
+  object-fit: cover;
+}
+
+.attendance-viewer-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffedd5;
+  color: #c2410c;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.attendance-viewer-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.attendance-viewer-name {
+  display: block;
+  font-weight: 600;
+  color: #111827;
+}
+
+.attendance-viewer-email {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attendance-viewer-add-button {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #ff7d2c;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.attendance-viewer-add-button:hover:not(:disabled) {
+  background: #ea580c;
+}
+
+.attendance-viewer-add-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.attendance-viewers-list-heading {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.attendance-viewers-count {
+  color: #ff7d2c;
+}
+
+.attendance-viewers-action-message {
+  margin: 12px 0 0;
+}
+
+.attendance-admin-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.88rem;
+}
+
 .nav-link {
   text-decoration: none;
   color: #374151;

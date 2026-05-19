@@ -601,3 +601,66 @@ html[data-theme='dark'] body {
 [data-theme='dark'] .error {
   color: #fca5a5;
 }
+
+[data-theme='dark'] .calendar-context-menu {
+  background: #1e293b;
+  border-color: #475569;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .calendar-context-menu-item {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .calendar-context-menu-item:hover,
+[data-theme='dark'] .calendar-context-menu-item:focus-visible {
+  background: #422006;
+  color: #fdba74;
+}
+
+[data-theme='dark'] .attendance-viewers-modal {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .attendance-viewers-subtitle,
+[data-theme='dark'] .attendance-viewer-email {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .attendance-viewers-close {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .attendance-viewers-close:hover {
+  background: #475569;
+}
+
+[data-theme='dark'] .attendance-viewers-search {
+  border-bottom-color: #475569;
+}
+
+[data-theme='dark'] .attendance-viewers-search-input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .attendance-viewer-avatar-wrap {
+  background: #334155;
+}
+
+[data-theme='dark'] .attendance-viewer-avatar-fallback {
+  background: #422006;
+  color: #fdba74;
+}
+
+[data-theme='dark'] .attendance-viewer-name {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .attendance-admin-hint {
+  background: #422006;
+  color: #fdba74;
+}
