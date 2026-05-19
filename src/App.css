@@ -563,6 +563,50 @@ span.profile-avatar-large.user-avatar-fallback {
   opacity: 0.72;
 }
 
+.admin-members-row--super-admin {
+  background: #fffbeb;
+}
+
+.admin-members-row--admin {
+  background: #f8fafc;
+}
+
+.admin-member-admin-cell {
+  white-space: nowrap;
+}
+
+.admin-member-admin-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-member-admin-check input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #ff7d2c;
+}
+
+.admin-member-admin-check input:disabled {
+  cursor: not-allowed;
+}
+
+.admin-member-admin-check-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.admin-member-badge--super {
+  color: #92400e;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
 .admin-members-empty {
   text-align: center;
   color: #6b7280;

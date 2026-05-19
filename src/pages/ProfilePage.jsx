@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import AdminMembersCard from '../components/AdminMembersCard'
-import { isAdminUser } from '../lib/admin'
+import { canAccessMemberAdmin, isSuperAdminUser } from '../lib/admin'
 import {
   getUserDisplayFields,
   normalizeAvatarUrl,
@@ -28,7 +28,7 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
     ;(async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, avatar_url')
+        .select('display_name, avatar_url, is_admin')
         .eq('id', user.id)
         .maybeSingle()
       if (!cancelled && !error && data) {
@@ -50,7 +50,8 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
       })
   const showAvatar = Boolean(profileAvatarSrc) && !imgFailed
   const email = user?.email ?? ''
-  const isAdmin = isAdminUser(user)
+  const isSuperAdmin = isSuperAdminUser(user)
+  const isAdmin = canAccessMemberAdmin(user, profileRow)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
@@ -151,7 +152,9 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
         </div>
       </section>
 
-      {isAdmin ? <AdminMembersCard currentUserId={user?.id} /> : null}
+      {isAdmin ? (
+        <AdminMembersCard currentUserId={user?.id} isSuperAdmin={isSuperAdmin} />
+      ) : null}
     </div>
   )
 }

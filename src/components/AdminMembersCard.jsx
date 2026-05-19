@@ -70,12 +70,23 @@ function AdminMemberAvatar({ displayName, avatarUrl }) {
   )
 }
 
-function AdminMembersCard({ currentUserId }) {
+function AdminMembersCard({ currentUserId, isSuperAdmin }) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actingId, setActingId] = useState(null)
   const [actionError, setActionError] = useState('')
+
+  const sortedMembers = useMemo(() => {
+    const rank = (member) => {
+      if (member.is_super_admin) return 0
+      if (member.is_admin) return 1
+      return 2
+    }
+    return [...members].sort(
+      (a, b) => rank(a) - rank(b) || new Date(b.created_at) - new Date(a.created_at),
+    )
+  }, [members])
 
   const loadMembers = useCallback(async () => {
     if (!supabase) {
@@ -107,6 +118,46 @@ function AdminMembersCard({ currentUserId }) {
         row.user_id === userId ? { ...row, is_blocked: isBlocked } : row,
       ),
     )
+  }
+
+  const updateMemberAdmin = (userId, nextIsAdmin) => {
+    setMembers((prev) =>
+      prev.map((row) =>
+        row.user_id === userId ? { ...row, is_admin: nextIsAdmin } : row,
+      ),
+    )
+  }
+
+  const handleAdminToggle = async (member, nextChecked) => {
+    if (!isSuperAdmin || member.is_super_admin) return
+
+    const label = member.display_name || '회원'
+    if (nextChecked) {
+      const ok = window.confirm(
+        `${label} 회원에게 관리자 권한을 부여하시겠습니까?\n\n내 정보에서 회원 관리 메뉴가 표시됩니다.`,
+      )
+      if (!ok) return
+    } else {
+      const ok = window.confirm(`${label} 회원의 관리자 권한을 해제하시겠습니까?`)
+      if (!ok) return
+    }
+
+    if (!supabase) return
+
+    setActingId(member.user_id)
+    setActionError('')
+    const { error: adminError } = await supabase.rpc('admin_set_member_admin', {
+      target_user_id: member.user_id,
+      grant_admin: nextChecked,
+    })
+    setActingId(null)
+
+    if (adminError) {
+      setActionError(adminError.message)
+      return
+    }
+
+    updateMemberAdmin(member.user_id, nextChecked)
   }
 
   const handleDeleteMember = async (member) => {
@@ -190,7 +241,9 @@ function AdminMembersCard({ currentUserId }) {
         <div>
           <h2>회원 관리</h2>
           <p className="muted admin-members-desc">
-            관리자 전용 · 차단 시 순위 제외 및 접속 불가 · 삭제 시 모든 데이터가 제거됩니다.
+            {isSuperAdmin
+              ? '슈퍼관리자 · 관리자 지정·차단·삭제 가능'
+              : '관리자 · 차단·삭제 가능 (관리자 지정은 슈퍼관리자만)'}
           </p>
         </div>
         <button
@@ -224,23 +277,32 @@ function AdminMembersCard({ currentUserId }) {
                 <th scope="col">이메일</th>
                 <th scope="col">직관</th>
                 <th scope="col">상태</th>
+                <th scope="col">관리자</th>
                 <th scope="col">가입일</th>
                 <th scope="col">관리</th>
               </tr>
             </thead>
             <tbody>
-              {members.length === 0 ? (
+              {sortedMembers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="admin-members-empty">
+                  <td colSpan={7} className="admin-members-empty">
                     등록된 회원이 없습니다.
                   </td>
                 </tr>
               ) : (
-                members.map((member) => {
+                sortedMembers.map((member) => {
                   const isSelf = member.user_id === currentUserId
                   const isBlocked = Boolean(member.is_blocked)
                   const isActing = actingId === member.user_id
-                  const rowClass = isBlocked ? 'admin-members-row--blocked' : ''
+                  const isSuperAdminRow = Boolean(member.is_super_admin)
+                  const isAdminChecked = isSuperAdminRow || Boolean(member.is_admin)
+                  const rowClass = [
+                    isBlocked ? 'admin-members-row--blocked' : '',
+                    isSuperAdminRow ? 'admin-members-row--super-admin' : '',
+                    member.is_admin && !isSuperAdminRow ? 'admin-members-row--admin' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
 
                   return (
                     <tr key={member.user_id} className={rowClass}>
@@ -253,6 +315,11 @@ function AdminMembersCard({ currentUserId }) {
                           <span className="admin-member-name">{member.display_name}</span>
                           {isSelf ? (
                             <span className="admin-member-badge">나</span>
+                          ) : null}
+                          {isSuperAdminRow ? (
+                            <span className="admin-member-badge admin-member-badge--super">
+                              슈퍼
+                            </span>
                           ) : null}
                         </span>
                       </td>
@@ -268,6 +335,26 @@ function AdminMembersCard({ currentUserId }) {
                         >
                           {isBlocked ? '차단' : '정상'}
                         </span>
+                      </td>
+                      <td className="admin-member-admin-cell">
+                        <label className="admin-member-admin-check">
+                          <input
+                            type="checkbox"
+                            checked={isAdminChecked}
+                            disabled={
+                              !isSuperAdmin ||
+                              isSuperAdminRow ||
+                              Boolean(actingId) ||
+                              isSelf
+                            }
+                            onChange={(event) =>
+                              void handleAdminToggle(member, event.target.checked)
+                            }
+                          />
+                          <span className="admin-member-admin-check-label">
+                            {isSuperAdminRow ? '슈퍼관리자' : isAdminChecked ? '관리자' : ''}
+                          </span>
+                        </label>
                       </td>
                       <td>{formatMemberDate(member.created_at)}</td>
                       <td>
