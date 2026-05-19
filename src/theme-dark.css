@@ -461,6 +461,38 @@ html[data-theme='dark'] body {
   background: #7f1d1d;
 }
 
+[data-theme='dark'] .admin-member-block-button {
+  background: #451a03;
+  color: #fde68a;
+  border-color: #92400e;
+}
+
+[data-theme='dark'] .admin-member-block-button:hover:not(:disabled) {
+  background: #78350f;
+}
+
+[data-theme='dark'] .admin-member-unblock-button {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #047857;
+}
+
+[data-theme='dark'] .admin-member-unblock-button:hover:not(:disabled) {
+  background: #065f46;
+}
+
+[data-theme='dark'] .admin-member-status-badge--active {
+  background: #064e3b;
+  color: #a7f3d0;
+  border-color: #047857;
+}
+
+[data-theme='dark'] .admin-member-status-badge--blocked {
+  background: #450a0a;
+  color: #fecaca;
+  border-color: #7f1d1d;
+}
+
 [data-theme='dark'] .rankings-user-avatar-wrap,
 [data-theme='dark'] .profile-avatar-wrap {
   background: #243044;

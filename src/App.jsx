@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { supabase, supabaseConfigError } from './lib/supabase'
+import { BLOCKED_LOGIN_MESSAGE } from './lib/admin'
 import { refreshLeaderboardCache } from './lib/refreshLeaderboard'
 import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
 import AppTail from './components/AppTail'
@@ -143,6 +144,7 @@ function AuthenticatedApp({ session, userDisplayName, navClassName, signOut }) {
 function App() {
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [sessionReady, setSessionReady] = useState(true)
   const [authError, setAuthError] = useState('')
   const [participationCode, setParticipationCode] = useState('')
   const [participationCodeError, setParticipationCodeError] = useState('')
@@ -231,6 +233,43 @@ function App() {
     }
   }, [session, useLocalMockAuth])
 
+  useEffect(() => {
+    if (!session?.user?.id || useLocalMockAuth || !supabase) {
+      setSessionReady(true)
+      return undefined
+    }
+    if (!isAuthUserUuid(session.user.id)) {
+      setSessionReady(true)
+      return undefined
+    }
+
+    let cancelled = false
+    setSessionReady(false)
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_blocked')
+        .eq('id', session.user.id)
+        .maybeSingle()
+
+      if (cancelled) return
+
+      if (!error && data?.is_blocked) {
+        await supabase.auth.signOut()
+        setSession(null)
+        setAuthError(BLOCKED_LOGIN_MESSAGE)
+        setSessionReady(true)
+        return
+      }
+
+      setSessionReady(true)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [session?.user?.id, useLocalMockAuth])
+
   const navClassName = useMemo(
     () => ({ isActive }) => (isActive ? 'nav-link active' : 'nav-link'),
     [],
@@ -286,7 +325,7 @@ function App() {
     setSession(null)
   }
 
-  if (authLoading) {
+  if (authLoading || (session && !sessionReady)) {
     return (
       <div className="app-shell">
         <p className="center-text">로그인 상태를 확인하는 중입니다...</p>

@@ -118,6 +118,9 @@ def build_leaderboard_rows(
 
   for row in attendance:
     user_id = row["user_id"]
+    profile = profile_by_id.get(user_id)
+    if profile and profile.get("is_blocked"):
+      continue
     match = row.get("matches")
     if not is_match_decided(match):
       continue
@@ -139,6 +142,8 @@ def build_leaderboard_rows(
     if stats["games"] <= 0:
       continue
     profile = profile_by_id.get(user_id, {})
+    if profile.get("is_blocked"):
+      continue
     display_name = (profile.get("display_name") or "").strip() or "회원"
     denominator = stats["win_rate_denominator"]
     win_rate = round(100.0 * stats["wins"] / denominator, 1) if denominator > 0 else 0.0
@@ -198,7 +203,7 @@ def sync_leaderboard() -> list[dict[str, Any]]:
   base_url = require_env("SUPABASE_URL").rstrip("/")
   service_role_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
 
-  profiles = _fetch_all(base_url, service_role_key, "profiles", "id,display_name,avatar_url")
+  profiles = _fetch_all(base_url, service_role_key, "profiles", "id,display_name,avatar_url,is_blocked")
   attendance = _fetch_all(
     base_url,
     service_role_key,

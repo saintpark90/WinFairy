@@ -74,7 +74,7 @@ function AdminMembersCard({ currentUserId }) {
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [deletingId, setDeletingId] = useState(null)
+  const [actingId, setActingId] = useState(null)
   const [actionError, setActionError] = useState('')
 
   const loadMembers = useCallback(async () => {
@@ -101,6 +101,14 @@ function AdminMembersCard({ currentUserId }) {
     void loadMembers()
   }, [loadMembers])
 
+  const updateMemberBlocked = (userId, isBlocked) => {
+    setMembers((prev) =>
+      prev.map((row) =>
+        row.user_id === userId ? { ...row, is_blocked: isBlocked } : row,
+      ),
+    )
+  }
+
   const handleDeleteMember = async (member) => {
     const label = member.display_name || '회원'
     const email = member.email ? `\n(${member.email})` : ''
@@ -116,12 +124,12 @@ function AdminMembersCard({ currentUserId }) {
 
     if (!supabase) return
 
-    setDeletingId(member.user_id)
+    setActingId(member.user_id)
     setActionError('')
     const { error: deleteError } = await supabase.rpc('admin_delete_member', {
       target_user_id: member.user_id,
     })
-    setDeletingId(null)
+    setActingId(null)
 
     if (deleteError) {
       setActionError(deleteError.message)
@@ -132,13 +140,57 @@ function AdminMembersCard({ currentUserId }) {
     void refreshLeaderboardCache(supabase)
   }
 
+  const handleBlockMember = async (member) => {
+    const label = member.display_name || '회원'
+    const ok = window.confirm(
+      `${label} 회원을 차단하시겠습니까?\n\n순위에서 숨겨지며 로그인·접속이 불가능해집니다.`,
+    )
+    if (!ok || !supabase) return
+
+    setActingId(member.user_id)
+    setActionError('')
+    const { error: blockError } = await supabase.rpc('admin_block_member', {
+      target_user_id: member.user_id,
+    })
+    setActingId(null)
+
+    if (blockError) {
+      setActionError(blockError.message)
+      return
+    }
+
+    updateMemberBlocked(member.user_id, true)
+    void refreshLeaderboardCache(supabase)
+  }
+
+  const handleUnblockMember = async (member) => {
+    const label = member.display_name || '회원'
+    const ok = window.confirm(`${label} 회원의 차단을 해제하시겠습니까?`)
+    if (!ok || !supabase) return
+
+    setActingId(member.user_id)
+    setActionError('')
+    const { error: unblockError } = await supabase.rpc('admin_unblock_member', {
+      target_user_id: member.user_id,
+    })
+    setActingId(null)
+
+    if (unblockError) {
+      setActionError(unblockError.message)
+      return
+    }
+
+    updateMemberBlocked(member.user_id, false)
+    void refreshLeaderboardCache(supabase)
+  }
+
   return (
     <section className="card admin-members-card">
       <div className="admin-members-header">
         <div>
           <h2>회원 관리</h2>
           <p className="muted admin-members-desc">
-            관리자 전용 · 회원 삭제 시 프로필과 직관 기록이 모두 제거됩니다.
+            관리자 전용 · 차단 시 순위 제외 및 접속 불가 · 삭제 시 모든 데이터가 제거됩니다.
           </p>
         </div>
         <button
@@ -171,6 +223,7 @@ function AdminMembersCard({ currentUserId }) {
                 <th scope="col">회원</th>
                 <th scope="col">이메일</th>
                 <th scope="col">직관</th>
+                <th scope="col">상태</th>
                 <th scope="col">가입일</th>
                 <th scope="col">관리</th>
               </tr>
@@ -178,16 +231,19 @@ function AdminMembersCard({ currentUserId }) {
             <tbody>
               {members.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="admin-members-empty">
+                  <td colSpan={6} className="admin-members-empty">
                     등록된 회원이 없습니다.
                   </td>
                 </tr>
               ) : (
                 members.map((member) => {
                   const isSelf = member.user_id === currentUserId
-                  const isDeleting = deletingId === member.user_id
+                  const isBlocked = Boolean(member.is_blocked)
+                  const isActing = actingId === member.user_id
+                  const rowClass = isBlocked ? 'admin-members-row--blocked' : ''
+
                   return (
-                    <tr key={member.user_id}>
+                    <tr key={member.user_id} className={rowClass}>
                       <td>
                         <span className="admin-member-name-cell">
                           <AdminMemberAvatar
@@ -202,19 +258,51 @@ function AdminMembersCard({ currentUserId }) {
                       </td>
                       <td className="admin-member-email">{member.email || '—'}</td>
                       <td className="admin-member-count">{member.attendance_count ?? 0}경기</td>
+                      <td>
+                        <span
+                          className={
+                            isBlocked
+                              ? 'admin-member-status-badge admin-member-status-badge--blocked'
+                              : 'admin-member-status-badge admin-member-status-badge--active'
+                          }
+                        >
+                          {isBlocked ? '차단' : '정상'}
+                        </span>
+                      </td>
                       <td>{formatMemberDate(member.created_at)}</td>
                       <td>
                         {isSelf ? (
                           <span className="muted admin-member-self-hint">본인</span>
                         ) : (
-                          <button
-                            type="button"
-                            className="admin-member-delete-button"
-                            disabled={Boolean(deletingId)}
-                            onClick={() => void handleDeleteMember(member)}
-                          >
-                            {isDeleting ? '삭제 중…' : '삭제'}
-                          </button>
+                          <div className="admin-member-actions">
+                            {isBlocked ? (
+                              <button
+                                type="button"
+                                className="admin-member-unblock-button"
+                                disabled={Boolean(actingId)}
+                                onClick={() => void handleUnblockMember(member)}
+                              >
+                                {isActing ? '처리 중…' : '차단해제'}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="admin-member-block-button"
+                                disabled={Boolean(actingId)}
+                                onClick={() => void handleBlockMember(member)}
+                              >
+                                {isActing ? '처리 중…' : '차단'}
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="admin-member-delete-button"
+                              disabled={Boolean(actingId)}
+                              onClick={() => void handleDeleteMember(member)}
+                            >
+                              {isActing ? '처리 중…' : '삭제'}
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

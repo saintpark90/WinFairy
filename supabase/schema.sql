@@ -70,6 +70,7 @@ create table if not exists public.profiles (
   display_name text,
   avatar_url text,
   email text,
+  is_blocked boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -218,6 +219,7 @@ as $$
   from public.profiles p
   inner join public.user_attendance ua on ua.user_id = p.id
   left join public.matches m on m.id = ua.match_id
+  where coalesce(p.is_blocked, false) = false
   group by p.id, p.display_name, p.avatar_url
   having count(
     case
@@ -283,6 +285,7 @@ returns table (
   email text,
   avatar_url text,
   attendance_count bigint,
+  is_blocked boolean,
   created_at timestamptz,
   updated_at timestamptz
 )
@@ -303,11 +306,12 @@ begin
     p.email,
     p.avatar_url,
     count(ua.id)::bigint as attendance_count,
+    p.is_blocked,
     p.created_at,
     p.updated_at
   from public.profiles p
   left join public.user_attendance ua on ua.user_id = p.id
-  group by p.id, p.display_name, p.email, p.avatar_url, p.created_at, p.updated_at
+  group by p.id, p.display_name, p.email, p.avatar_url, p.is_blocked, p.created_at, p.updated_at
   order by p.created_at desc;
 end;
 $$;
@@ -350,6 +354,114 @@ $$;
 
 revoke all on function public.admin_delete_member(uuid) from public;
 grant execute on function public.admin_delete_member(uuid) to authenticated;
+
+create or replace function public.is_current_user_blocked()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select coalesce(
+    (
+      select p.is_blocked
+      from public.profiles p
+      where p.id = auth.uid()
+    ),
+    false
+  );
+$$;
+
+revoke all on function public.is_current_user_blocked() from public;
+grant execute on function public.is_current_user_blocked() to authenticated;
+
+drop policy if exists "user own attendance read" on public.user_attendance;
+create policy "user own attendance read"
+  on public.user_attendance
+  for select
+  using (auth.uid() = user_id and not public.is_current_user_blocked());
+
+drop policy if exists "user own attendance insert" on public.user_attendance;
+create policy "user own attendance insert"
+  on public.user_attendance
+  for insert
+  with check (auth.uid() = user_id and not public.is_current_user_blocked());
+
+drop policy if exists "user own attendance update" on public.user_attendance;
+create policy "user own attendance update"
+  on public.user_attendance
+  for update
+  using (auth.uid() = user_id and not public.is_current_user_blocked())
+  with check (auth.uid() = user_id and not public.is_current_user_blocked());
+
+drop policy if exists "user own attendance delete" on public.user_attendance;
+create policy "user own attendance delete"
+  on public.user_attendance
+  for delete
+  using (auth.uid() = user_id and not public.is_current_user_blocked());
+
+create or replace function public.admin_block_member(target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller uuid := auth.uid();
+begin
+  if caller is null then
+    raise exception 'not authenticated';
+  end if;
+  if not public.is_app_admin() then
+    raise exception 'forbidden';
+  end if;
+  if target_user_id is null then
+    raise exception 'invalid user id';
+  end if;
+  if target_user_id = caller then
+    raise exception 'cannot block own account';
+  end if;
+  if not exists (select 1 from public.profiles p where p.id = target_user_id) then
+    raise exception 'user not found';
+  end if;
+  update public.profiles
+  set is_blocked = true, updated_at = now()
+  where id = target_user_id;
+end;
+$$;
+
+revoke all on function public.admin_block_member(uuid) from public;
+grant execute on function public.admin_block_member(uuid) to authenticated;
+
+create or replace function public.admin_unblock_member(target_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  caller uuid := auth.uid();
+begin
+  if caller is null then
+    raise exception 'not authenticated';
+  end if;
+  if not public.is_app_admin() then
+    raise exception 'forbidden';
+  end if;
+  if target_user_id is null then
+    raise exception 'invalid user id';
+  end if;
+  if not exists (select 1 from public.profiles p where p.id = target_user_id) then
+    raise exception 'user not found';
+  end if;
+  update public.profiles
+  set is_blocked = false, updated_at = now()
+  where id = target_user_id;
+end;
+$$;
+
+revoke all on function public.admin_unblock_member(uuid) from public;
+grant execute on function public.admin_unblock_member(uuid) to authenticated;
 
 -- 기존 직관만 있고 profiles가 없던 경우(선택): 아래 한 번 실행
 -- insert into public.profiles (id)

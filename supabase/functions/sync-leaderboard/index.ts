@@ -24,6 +24,7 @@ type ProfileRow = {
   id: string;
   display_name?: string | null;
   avatar_url?: string | null;
+  is_blocked?: boolean | null;
 };
 
 type LeaderboardRow = {
@@ -125,6 +126,9 @@ function buildLeaderboardRows(
     const match = row.matches ?? null;
     if (!isMatchDecided(match)) continue;
 
+    const profile = profileById.get(row.user_id);
+    if (profile?.is_blocked) continue;
+
     const bucket = statsByUser.get(row.user_id) ?? {
       games: 0,
       wins: 0,
@@ -148,6 +152,7 @@ function buildLeaderboardRows(
   for (const [userId, stats] of statsByUser) {
     if (stats.games <= 0) continue;
     const profile = profileById.get(userId);
+    if (profile?.is_blocked) continue;
     const displayName = (profile?.display_name ?? "").trim() || "회원";
     const winRate =
       stats.winRateDenominator > 0
@@ -204,7 +209,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const [profiles, attendance] = await Promise.all([
-      fetchAll<ProfileRow>(admin, "profiles", "id,display_name,avatar_url"),
+      fetchAll<ProfileRow>(admin, "profiles", "id,display_name,avatar_url,is_blocked"),
       fetchAll<AttendanceRow>(
         admin,
         "user_attendance",

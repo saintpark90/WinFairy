@@ -494,6 +494,75 @@ span.profile-avatar-large.user-avatar-fallback {
   cursor: not-allowed;
 }
 
+.admin-member-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-member-block-button {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-member-block-button:hover:not(:disabled) {
+  background: #fef3c7;
+}
+
+.admin-member-unblock-button {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.admin-member-unblock-button:hover:not(:disabled) {
+  background: #d1fae5;
+}
+
+.admin-member-block-button:disabled,
+.admin-member-unblock-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.admin-member-status-badge {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+
+.admin-member-status-badge--active {
+  color: #065f46;
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+}
+
+.admin-member-status-badge--blocked {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.admin-members-row--blocked {
+  opacity: 0.72;
+}
+
 .admin-members-empty {
   text-align: center;
   color: #6b7280;
