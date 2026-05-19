@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fetchAttendanceLeaderboard } from '../lib/leaderboard'
 import { supabase } from '../lib/supabase'
 import { optimizeAvatarUrl } from '../lib/userDisplay'
 
@@ -88,11 +89,9 @@ function RankingsPage({ userId }) {
       }
       setLoading(true)
       setError('')
-      const { data, error: rpcError } = await supabase.rpc(
-        'get_attendance_leaderboard',
-      )
-      if (rpcError) {
-        setError(rpcError.message)
+      const { data, error: loadError } = await fetchAttendanceLeaderboard(supabase)
+      if (loadError) {
+        setError(loadError.message)
         setRows([])
       } else {
         setRows(data ?? [])

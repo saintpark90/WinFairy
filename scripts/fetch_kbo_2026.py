@@ -1177,6 +1177,14 @@ def main() -> None:
   upsert_matches(supabase_url, service_role_key, normalized)
   print(f"Upsert complete: {len(normalized)} matches")
 
+  try:
+    from sync_leaderboard import sync_leaderboard
+
+    leaderboard_rows = sync_leaderboard()
+    print(f"Leaderboard sync complete: {len(leaderboard_rows)} members")
+  except Exception as exc:
+    print(f"Leaderboard sync skipped: {exc}")
+
 
 if __name__ == "__main__":
   main()
