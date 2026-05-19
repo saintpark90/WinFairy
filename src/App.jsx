@@ -2,6 +2,7 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { supabase, supabaseConfigError } from './lib/supabase'
+import { refreshLeaderboardCache } from './lib/refreshLeaderboard'
 import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
 import AppTail from './components/AppTail'
 import ThemeToggle from './components/ThemeToggle'
@@ -220,6 +221,8 @@ function App() {
       )
       if (!cancelled && error) {
         console.error('[profiles]', error.message)
+      } else if (!cancelled && !error) {
+        void refreshLeaderboardCache(supabase)
       }
     })()
 

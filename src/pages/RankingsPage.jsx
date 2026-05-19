@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchAttendanceLeaderboard } from '../lib/leaderboard'
+import { LEADERBOARD_UPDATED_EVENT } from '../lib/refreshLeaderboard'
 import { supabase } from '../lib/supabase'
 import { optimizeAvatarUrl } from '../lib/userDisplay'
 
@@ -81,6 +82,8 @@ function RankingsPage({ userId }) {
   const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
+    let cancelled = false
+
     const load = async () => {
       if (!supabase) {
         setError('Supabase 환경변수가 비어 있어 순위를 불러올 수 없습니다.')
@@ -90,6 +93,7 @@ function RankingsPage({ userId }) {
       setLoading(true)
       setError('')
       const { data, error: loadError } = await fetchAttendanceLeaderboard(supabase)
+      if (cancelled) return
       if (loadError) {
         setError(loadError.message)
         setRows([])
@@ -98,7 +102,20 @@ function RankingsPage({ userId }) {
       }
       setLoading(false)
     }
+
     load()
+
+    const onRefresh = () => {
+      void load()
+    }
+    window.addEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
+    window.addEventListener('focus', onRefresh)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
+      window.removeEventListener('focus', onRefresh)
+    }
   }, [])
 
   const handleSort = useCallback((key) => {

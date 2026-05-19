@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { refreshLeaderboardCache } from '../lib/refreshLeaderboard'
 import { formatStadiumShort } from '../lib/stadiumShort'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 import { getKoreanDayMark, isKoreanNonRedDayMark, isKoreanPublicHolidayMark } from '../lib/koreanHolidays'
@@ -241,6 +242,7 @@ function AttendancePage({ userId }) {
           if (error) throw error
         }
         setActionMessage('')
+        void refreshLeaderboardCache(supabase)
       } catch (err) {
         if (wasAttended) {
           setAttendedSet((prev) => new Set(prev).add(dateText))
