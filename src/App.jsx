@@ -76,6 +76,7 @@ function App() {
     if (!isAuthUserUuid(session.user.id)) return
 
     const { displayName, avatarUrl } = getUserDisplayFields(session.user)
+    const securedAvatar = avatarUrl || null
 
     let cancelled = false
     ;(async () => {
@@ -83,7 +84,7 @@ function App() {
         {
           id: session.user.id,
           display_name: displayName,
-          avatar_url: avatarUrl || null,
+          avatar_url: securedAvatar,
           email: session.user.email ?? null,
           updated_at: new Date().toISOString(),
         },

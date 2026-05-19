@@ -1,10 +1,50 @@
-import { useState } from 'react'
-import { getUserDisplayFields, optimizeAvatarUrl } from '../lib/userDisplay'
+import { useEffect, useState } from 'react'
+import {
+  getUserDisplayFields,
+  normalizeAvatarUrl,
+  optimizeAvatarUrl,
+  resolveAvatarUrl,
+} from '../lib/userDisplay'
 import { supabase } from '../lib/supabase'
 
+const PROFILE_AVATAR_PX = 88
+
 function ProfilePage({ user, onAccountDeleted }) {
-  const { displayName, avatarUrl } = getUserDisplayFields(user)
-  const profileAvatarSrc = optimizeAvatarUrl(avatarUrl, 88)
+  const { displayName: sessionDisplayName } = getUserDisplayFields(user)
+  const [profileRow, setProfileRow] = useState(null)
+  const [imgFailed, setImgFailed] = useState(false)
+  const [useRawAvatar, setUseRawAvatar] = useState(false)
+
+  useEffect(() => {
+    setImgFailed(false)
+    setUseRawAvatar(false)
+  }, [user?.id, profileRow?.avatar_url])
+
+  useEffect(() => {
+    if (!user?.id || !supabase) return undefined
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (!cancelled && !error && data) {
+        setProfileRow(data)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
+
+  const displayName =
+    profileRow?.display_name?.trim() || sessionDisplayName
+  const avatarUrl = resolveAvatarUrl(user, profileRow)
+  const profileAvatarSrc = useRawAvatar
+    ? normalizeAvatarUrl(avatarUrl)
+    : optimizeAvatarUrl(avatarUrl, PROFILE_AVATAR_PX)
+  const showAvatar = Boolean(profileAvatarSrc) && !imgFailed
   const email = user?.email ?? ''
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
@@ -45,16 +85,23 @@ function ProfilePage({ user, onAccountDeleted }) {
       <section className="card profile-card">
         <h2>내 정보</h2>
         <div className="profile-layout">
-          {profileAvatarSrc ? (
+          {showAvatar ? (
             <span className="profile-avatar-wrap">
               <img
                 className="profile-avatar-large"
                 src={profileAvatarSrc}
                 alt=""
-                width={88}
-                height={88}
+                width={PROFILE_AVATAR_PX}
+                height={PROFILE_AVATAR_PX}
                 decoding="async"
                 referrerPolicy="no-referrer"
+                onError={() => {
+                  if (!useRawAvatar && avatarUrl) {
+                    setUseRawAvatar(true)
+                    return
+                  }
+                  setImgFailed(true)
+                }}
               />
             </span>
           ) : (

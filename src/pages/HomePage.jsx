@@ -99,7 +99,7 @@ const WarInfoHeader = () => (
     >
       ?
       <span className="top5-info-tip-bubble" role="tooltip">
-        KBO는 공식적으로 WAR를 제공하지 않습니다. 이 값은 경기 WPA 기반 대체 지표입니다.
+        KBO는 공식적으로 WAR를 제공하지 않습니다. 이 값은 경기 WPA(승리기여도) 기반 대체 지표입니다.
       </span>
     </span>
   </span>
