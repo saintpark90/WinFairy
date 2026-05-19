@@ -2686,7 +2686,7 @@ button {
   .rankings-page .rankings-table th,
   .rankings-page .rankings-table td {
     padding: 6px 1px;
-    font-size: 0.72rem;
+    font-size: 0.9rem;
   }
 
   .rankings-page .rankings-table th:nth-child(1),
