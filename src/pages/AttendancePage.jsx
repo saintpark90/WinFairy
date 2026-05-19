@@ -67,6 +67,12 @@ const formatAttendanceListDate = (isoDate) => {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${w})`
 }
 
+const formatAttendanceListDateShort = (isoDate) => {
+  const d = new Date(`${isoDate}T12:00:00`)
+  const w = WEEKDAY_KO[d.getDay()]
+  return `${d.getMonth() + 1}.${d.getDate()}(${w})`
+}
+
 const scoreTextForList = (match) => {
   const line = scoreLineForCell(match)
   if (line) return line
@@ -83,6 +89,9 @@ function AttendancePage({ userId }) {
   const [attendedSet, setAttendedSet] = useState(() => new Set())
   const [actionMessage, setActionMessage] = useState('')
   const savingDateRef = useRef(new Set())
+  const calendarTouchStartRef = useRef(null)
+
+  const CALENDAR_SWIPE_THRESHOLD_PX = 48
 
   useEffect(() => {
     let cancelled = false
@@ -278,12 +287,53 @@ function AttendancePage({ userId }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  const handleCalendarTouchStart = (event) => {
+    if (calendarLoading) return
+    const touch = event.touches[0]
+    if (!touch) return
+    calendarTouchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+    }
+  }
+
+  const handleCalendarTouchEnd = (event) => {
+    if (calendarLoading || !calendarTouchStartRef.current) return
+    const touch = event.changedTouches[0]
+    if (!touch) {
+      calendarTouchStartRef.current = null
+      return
+    }
+
+    const deltaX = touch.clientX - calendarTouchStartRef.current.x
+    const deltaY = touch.clientY - calendarTouchStartRef.current.y
+    calendarTouchStartRef.current = null
+
+    if (
+      Math.abs(deltaX) < CALENDAR_SWIPE_THRESHOLD_PX ||
+      Math.abs(deltaX) < Math.abs(deltaY)
+    ) {
+      return
+    }
+
+    if (deltaX < 0) {
+      setViewMonth((month) => shiftMonth(month, 1))
+    } else {
+      setViewMonth((month) => shiftMonth(month, -1))
+    }
+  }
+
+  const handleCalendarTouchCancel = () => {
+    calendarTouchStartRef.current = null
+  }
+
   return (
     <section className="card form-card attendance-page">
       <h2>직관일 입력</h2>
       <p className="attendance-intro">
         경기가 잡힌 날짜만 직관(또는 직관 예정)으로 저장하거나 해제할 수 있습니다. 같은 날짜를
-        다시 누르면 취소됩니다. 좌우 화살표 또는 키보드 방향키(← →)로 달을 옮길 수 있습니다.
+        다시 누르면 취소됩니다. 좌우 화살표·키보드 방향키(← →), 모바일에서는 달력을
+        좌우로 밀어 달을 옮길 수 있습니다.
       </p>
 
       <div className="calendar-wrap">
@@ -323,7 +373,12 @@ function AttendancePage({ userId }) {
         {calendarLoading ? <p>경기 일정을 불러오는 중...</p> : null}
         {calendarError ? <p className="error">{calendarError}</p> : null}
         {!calendarLoading && !calendarError ? (
-          <>
+          <div
+            className="calendar-swipe-area"
+            onTouchStart={handleCalendarTouchStart}
+            onTouchEnd={handleCalendarTouchEnd}
+            onTouchCancel={handleCalendarTouchCancel}
+          >
             <div className="calendar-days">
               {DAY_LABELS_MON.map((label, i) => (
                 <div
@@ -489,7 +544,7 @@ function AttendancePage({ userId }) {
                 패배
               </span>
             </div>
-          </>
+          </div>
         ) : null}
       </div>
 
@@ -522,8 +577,15 @@ function AttendancePage({ userId }) {
                         className={`attendance-list-row attendance-list-row--${row.resultKind}`}
                       >
                         <td>{row.order}</td>
-                        <td>{formatAttendanceListDate(row.dateText)}</td>
-                        <td>
+                        <td className="attendance-list-date" title={formatAttendanceListDate(row.dateText)}>
+                          <span className="attendance-list-date-full">
+                            {formatAttendanceListDate(row.dateText)}
+                          </span>
+                          <span className="attendance-list-date-short">
+                            {formatAttendanceListDateShort(row.dateText)}
+                          </span>
+                        </td>
+                        <td className="attendance-list-opponent-cell">
                           {row.match ? (
                             <span className="attendance-list-opponent">
                               {logoUrl ? (
@@ -538,7 +600,9 @@ function AttendancePage({ userId }) {
                                   }}
                                 />
                               ) : null}
-                              <span>{row.match.opponent_team ?? '–'}</span>
+                              <span title={row.match.opponent_team ?? ''}>
+                                {row.match.opponent_team ?? '–'}
+                              </span>
                             </span>
                           ) : (
                             '–'

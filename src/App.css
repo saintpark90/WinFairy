@@ -399,6 +399,12 @@ span.profile-avatar-large.user-avatar-fallback {
 .recent-games-scroll {
   min-width: 0;
   overflow-x: hidden;
+  --recent-game-cols:
+    minmax(0, 1.45fr)
+    minmax(0, 0.5fr)
+    minmax(0, 0.95fr)
+    minmax(0, 0.48fr)
+    minmax(0, 0.48fr);
 }
 
 .recent-game-line {
@@ -406,15 +412,8 @@ span.profile-avatar-large.user-avatar-fallback {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  /* 카드 폭 안에 맞춤 — 경기장 열은 상한만 두고 말줄임(1fr로 늘리지 않음) */
-  grid-template-columns:
-    minmax(0, 4.75rem)
-    minmax(0, 4.25rem)
-    minmax(2.25rem, 5.25rem)
-    minmax(0, 3.5rem)
-    minmax(0, 3.75rem)
-    minmax(0, 3.5rem);
-  gap: 6px 20px;
+  grid-template-columns: var(--recent-game-cols);
+  gap: 6px 8px;
   align-items: center;
   padding: 10px 0;
   border-bottom: 1px solid #e5e7eb;
@@ -435,6 +434,7 @@ span.profile-avatar-large.user-avatar-fallback {
   color: #6b7280;
   letter-spacing: -0.02em;
   text-align: center;
+  width: 100%;
 }
 
 .recent-game-colhead {
@@ -446,11 +446,16 @@ span.profile-avatar-large.user-avatar-fallback {
 
 .recent-game-date,
 .recent-game-time,
+.recent-game-datetime,
 .recent-game-stadium,
 .recent-game-opponent,
 .recent-game-score,
 .recent-game-result {
   min-width: 0;
+}
+
+.recent-game-colhead-short {
+  display: none;
 }
 
 .recent-game-colhead--center {
@@ -459,6 +464,16 @@ span.profile-avatar-large.user-avatar-fallback {
 
 .recent-game-colhead--end {
   text-align: right;
+}
+
+.recent-game-datetime {
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
 }
 
 .recent-game-date {
@@ -480,11 +495,25 @@ span.profile-avatar-large.user-avatar-fallback {
 }
 
 .recent-game-opponent {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 4px;
   min-width: 0;
   max-width: 100%;
+  overflow: hidden;
+}
+
+.recent-game-opponent-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.2;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .recent-game-logo {
@@ -501,16 +530,6 @@ span.profile-avatar-large.user-avatar-fallback {
   flex-shrink: 0;
 }
 
-.recent-game-opponent-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #374151;
-  line-height: 1.2;
-}
-
 .recent-game-score {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -525,7 +544,7 @@ span.profile-avatar-large.user-avatar-fallback {
   text-align: center;
   padding: 2px 4px;
   border-radius: 6px;
-  justify-self: end;
+  justify-self: center;
   font-size: 0.8125rem;
   white-space: nowrap;
 }
@@ -533,13 +552,11 @@ span.profile-avatar-large.user-avatar-fallback {
 .recent-game-result--win {
   background: #dcfce7;
   color: #166534;
-  margin-right: 15px;
 }
 
 .recent-game-result--loss {
   background: #ffedd5;
   color: #9a3412;
-  margin-right: 15px;
 }
 
 .recent-game-result--draw {
@@ -692,6 +709,58 @@ td.stat-rank-col {
   min-height: 0;
 }
 
+.stat-card-opponent .table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stat-card-opponent table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.stat-card-opponent {
+  --stat-rank-col-width: 3.25rem;
+  --stat-label-col-min-width: 8.5rem;
+}
+
+.stat-card-opponent th,
+.stat-card-opponent td {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.stat-card-opponent .team-label-cell {
+  white-space: nowrap;
+}
+
+.stat-card-opponent .stat-rank-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #ffffff;
+  box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
+}
+
+.stat-card-opponent thead .stat-rank-col {
+  z-index: 4;
+}
+
+.stat-card-opponent .stat-label-col {
+  position: sticky;
+  left: var(--stat-rank-col-width);
+  z-index: 2;
+  width: 115px;
+  background: #ffffff;
+  box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
+}
+
+.stat-card-opponent thead .stat-label-col {
+  z-index: 4;
+}
+
 .ranking {
   list-style: none;
   margin: 0;
@@ -712,12 +781,16 @@ td.stat-rank-col {
 
 .top5-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .top5-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 31rem;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  --top5-rank-col-width: 2.75rem;
+  --top5-name-col-min-width: 5.5rem;
 }
 
 .top5-table th,
@@ -733,6 +806,37 @@ td.stat-rank-col {
   background: #f8fafc;
   color: #475569;
   font-weight: 700;
+}
+
+.top5-table .top5-rank-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: var(--top5-rank-col-width);
+  min-width: var(--top5-rank-col-width);
+  max-width: var(--top5-rank-col-width);
+  background: #ffffff;
+  box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
+}
+
+.top5-table thead .top5-rank-col {
+  z-index: 4;
+  background: #f8fafc;
+}
+
+.top5-table .top5-player-col,
+.top5-table .top5-player-name {
+  position: sticky;
+  left: var(--top5-rank-col-width);
+  z-index: 2;
+  min-width: var(--top5-name-col-min-width);
+  background: #ffffff;
+  box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
+}
+
+.top5-table thead .top5-player-col {
+  z-index: 4;
+  background: #f8fafc;
 }
 
 .top5-player-name {
@@ -760,37 +864,77 @@ td.stat-rank-col {
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1;
-  cursor: help;
+  cursor: pointer;
+}
+
+.top5-info-tip--open {
+  border-color: #ea580c;
+  color: #c2410c;
+  background: #fff7ed;
 }
 
 .top5-info-tip-bubble {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 8px);
-  transform: translateX(-50%);
-  min-width: 220px;
-  max-width: 280px;
-  padding: 8px 10px;
+  min-width: 260px;
+  max-width: min(340px, 92vw);
+  padding: 10px 12px;
   border-radius: 8px;
   background: #111827;
   color: #ffffff;
   font-size: 0.73rem;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.45;
   white-space: normal;
   text-align: left;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.2);
-  z-index: 20;
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.14s ease;
 }
 
-.top5-info-tip:hover .top5-info-tip-bubble,
-.top5-info-tip:focus-visible .top5-info-tip-bubble {
-  visibility: visible;
-  opacity: 1;
+.top5-info-tip-bubble--portal {
+  position: fixed;
+  z-index: 10000;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+
+.top5-info-tip-bubble--portal.top5-info-tip-bubble--above {
+  transform: translate(-50%, -100%);
+}
+
+.top5-info-tip-lead {
+  margin: 0 0 8px;
+}
+
+.top5-info-tip-section-title {
+  margin: 8px 0 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fcd34d;
+}
+
+.top5-info-tip-section-title:first-of-type {
+  margin-top: 0;
+}
+
+.top5-info-tip-formula {
+  margin: 0 0 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.64rem;
+  line-height: 1.5;
+  color: #e5e7eb;
+  word-break: keep-all;
+}
+
+.top5-info-tip-note {
+  margin: 0;
+  font-size: 0.68rem;
+  color: #cbd5e1;
+}
+
+.top5-info-tip-code {
+  padding: 0 0.25em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92em;
 }
 
 .form-card p {
@@ -817,6 +961,10 @@ td.stat-rank-col {
 
 .calendar-wrap {
   margin-top: 20px;
+}
+
+.calendar-swipe-area {
+  touch-action: pan-y;
 }
 
 .calendar-head {
@@ -1275,10 +1423,19 @@ td.stat-rank-col {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
 }
 
-.attendance-list-opponent span {
+.attendance-list-opponent span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 500;
+}
+
+.attendance-list-date-short {
+  display: none;
 }
 
 /* 달력 셀과 동일한 승패 배경 */
@@ -1541,40 +1698,310 @@ button {
   color: #6b7280;
 }
 
+.rankings-page {
+  min-width: 0;
+}
+
+.rankings-page > * {
+  min-width: 0;
+}
+
 .rankings-page .rankings-table-wrap {
   margin-top: 14px;
+  overflow-x: hidden;
+}
+
+.rankings-table-heading {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #374151;
+  text-align: center;
+}
+
+.rankings-sort-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.rankings-sort-bar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #374151;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rankings-sort-bar-button:hover {
+  border-color: #fdba74;
+  color: #c2410c;
+}
+
+.rankings-sort-bar-button--active {
+  border-color: #ea580c;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.rankings-sort-bar-icon {
+  font-size: 0.72em;
+  line-height: 1;
+}
+
+.rankings-no-draws-notice {
+  margin: 16px auto 0;
+  max-width: 420px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.rankings-podium {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.18fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 10px;
+  margin: 20px auto 8px;
+  padding: 0 4px;
+  max-width: 520px;
+}
+
+.rankings-podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.rankings-podium-medal {
+  font-size: 2.75rem;
+  line-height: 1;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 3px 6px rgba(15, 23, 42, 0.18));
+}
+
+.rankings-podium-slot--gold .rankings-podium-medal {
+  font-size: 4rem;
+  margin-bottom: 12px;
+}
+
+.rankings-podium-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.rankings-podium-avatar-img,
+.rankings-podium-avatar-fallback {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+  background: #f3f4f6;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+  image-rendering: auto;
+}
+
+@supports (image-rendering: high-quality) {
+  .rankings-podium-avatar-img {
+    image-rendering: high-quality;
+  }
+}
+
+@supports (image-rendering: smooth) {
+  .rankings-podium-avatar-img {
+    image-rendering: smooth;
+  }
+}
+
+.rankings-podium-avatar--gold .rankings-podium-avatar-img,
+.rankings-podium-avatar--gold .rankings-podium-avatar-fallback {
+  width: 72px;
+  height: 72px;
+}
+
+.rankings-podium-avatar--silver .rankings-podium-avatar-img,
+.rankings-podium-avatar--silver .rankings-podium-avatar-fallback,
+.rankings-podium-avatar--bronze .rankings-podium-avatar-img,
+.rankings-podium-avatar--bronze .rankings-podium-avatar-fallback {
+  width: 58px;
+  height: 58px;
+}
+
+.rankings-podium-avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff7ed;
+  color: #c2410c;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.rankings-podium-avatar--gold .rankings-podium-avatar-fallback {
+  font-size: 1.5rem;
+}
+
+.rankings-podium-avatar-name {
+  white-space: normal;
+  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.25;
+  word-break: keep-all;
+  color: #111827;
+}
+
+.rankings-podium-avatar--gold .rankings-podium-avatar-name {
+  font-size: 1.02rem;
+}
+
+.rankings-podium-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4b5563;
+  font-variant-numeric: tabular-nums;
+}
+
+.rankings-podium-stats-sep {
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.rankings-podium-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  opacity: 0.45;
+}
+
+.rankings-podium-placeholder-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2px dashed #d1d5db;
+  color: #9ca3af;
+  font-weight: 700;
+}
+
+.rankings-podium-slot--gold .rankings-podium-placeholder-avatar {
+  width: 64px;
+  height: 64px;
+}
+
+.rankings-podium-placeholder-name {
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.rankings-podium-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border-radius: 10px 10px 0 0;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 4px 12px rgba(15, 23, 42, 0.12);
+}
+
+.rankings-podium-slot--gold .rankings-podium-block {
+  height: 108px;
+  background: linear-gradient(180deg, #fde047 0%, #f59e0b 55%, #b45309 100%);
+}
+
+.rankings-podium-slot--silver .rankings-podium-block {
+  height: 78px;
+  background: linear-gradient(180deg, #f1f5f9 0%, #94a3b8 55%, #475569 100%);
+}
+
+.rankings-podium-slot--bronze .rankings-podium-block {
+  height: 58px;
+  background: linear-gradient(180deg, #fdba74 0%, #ea580c 55%, #9a3412 100%);
+}
+
+.rankings-podium-slot--empty .rankings-podium-block {
+  opacity: 0.55;
+  background: linear-gradient(180deg, #e5e7eb 0%, #9ca3af 100%);
+}
+
+.rankings-podium-slot--me {
+  outline: 2px solid #ea580c;
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+
+.rankings-podium-slot--me .rankings-podium-stats {
+  color: #c2410c;
 }
 
 .rankings-table {
   table-layout: fixed;
   width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .rankings-table th,
 .rankings-table td {
-  width: 8rem;
   text-align: center;
   vertical-align: middle;
+  padding: 8px 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .rankings-table th:nth-child(1),
 .rankings-table td:nth-child(1) {
-  width: 8rem;
+  width: 2.75rem;
 }
 
 .rankings-table th:nth-child(2),
 .rankings-table td:nth-child(2) {
+  width: auto;
   text-align: left;
+  overflow: hidden;
 }
 
 .rankings-table th:nth-child(n + 3),
 .rankings-table td:nth-child(n + 3) {
-  width: 8rem;
-}
-
-.rankings-table th:nth-child(7),
-.rankings-table td:nth-child(7) {
-  width: 8rem;
+  width: 3.25rem;
 }
 
 .rankings-sort-button {
@@ -1838,6 +2265,70 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .recent-games-scroll {
+    --recent-game-cols:
+      minmax(0, 1.1fr)
+      minmax(0, 0.38fr)
+      minmax(0, 1.15fr)
+      minmax(0, 0.4fr)
+      minmax(0, 0.38fr);
+  }
+
+  .recent-game-line {
+    gap: 4px 5px;
+    font-size: 0.72rem;
+    padding: 8px 0;
+  }
+
+  .recent-game-line--header {
+    font-size: 0.68rem;
+    padding: 4px 0 8px;
+  }
+
+  .recent-game-colhead-full {
+    display: none;
+  }
+
+  .recent-game-colhead-short {
+    display: inline;
+  }
+
+  .recent-game-datetime {
+    font-size: 0.68rem;
+  }
+
+  .recent-game-logo {
+    width: 18px;
+    height: 18px;
+  }
+
+  .recent-game-logo-fallback {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .recent-game-opponent {
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .recent-game-opponent-name {
+    font-size: 0.72rem;
+    text-align: center;
+    flex: 1 1 auto;
+  }
+
+  .recent-game-score {
+    font-size: 0.75rem;
+  }
+
+  .recent-game-result {
+    font-size: 0.68rem;
+    padding: 2px 3px;
+  }
+
   .stat-card-stadium,
   .stat-card-weekstretch {
     flex: initial;
@@ -1897,8 +2388,348 @@ button {
   }
 
   .attendance-page .calendar-cell {
-    min-height: 92px;
-    padding: 5px;
+    min-height: 78px;
+    padding: 3px 2px 2px;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  .attendance-page .calendar-cell--attended {
+    border-width: 2px;
+  }
+
+  .attendance-page .calendar-cell--home-game {
+    border-width: 1.5px;
+  }
+
+  .attendance-page .calendar-days,
+  .attendance-page .calendar-grid {
+    gap: 3px;
+  }
+
+  .attendance-page .calendar-day-number {
+    font-size: 0.72rem;
+  }
+
+  .attendance-page .calendar-cell-head {
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .attendance-page .calendar-cell-emblem-head {
+    width: auto;
+    max-width: 46%;
+    min-width: 0;
+    margin-top: 0;
+    align-items: flex-end;
+    flex-shrink: 1;
+  }
+
+  .attendance-page .calendar-opponent-emblem {
+    width: 22px;
+    height: 22px;
+    max-width: 100%;
+  }
+
+  .attendance-page .calendar-emblem-placeholder {
+    width: 22px;
+    height: 22px;
+  }
+
+  .attendance-page .calendar-result-under-emblem {
+    font-size: 0.58rem;
+    letter-spacing: 0;
+    line-height: 1.1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attendance-page .calendar-result-under-emblem--pending {
+    font-size: 0;
+    line-height: 1;
+  }
+
+  .attendance-page .calendar-result-under-emblem--pending::after {
+    content: '전';
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #475569;
+  }
+
+  .attendance-page .calendar-cell-score-row {
+    min-height: 0;
+    margin-top: 1px;
+  }
+
+  .attendance-page .calendar-score-line {
+    font-size: 0.72rem;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attendance-page .calendar-game-time {
+    font-size: 0.62rem;
+    line-height: 1.1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attendance-page .calendar-holiday-caption {
+    font-size: 0.58rem;
+    line-height: 1.15;
+    padding-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attendance-page .calendar-holiday-spacer {
+    min-height: 0.45rem;
+  }
+
+  .attendance-page .calendar-attendance-check {
+    width: 18px;
+    height: 18px;
+    right: 1px;
+    bottom: 1px;
+    border-width: 1.5px;
+  }
+
+  .attendance-page .calendar-attendance-check-svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .attendance-page .attendance-list-table-wrap {
+    overflow-x: hidden;
+  }
+
+  .attendance-page .attendance-list-table {
+    table-layout: fixed;
+    min-width: 0;
+  }
+
+  .attendance-page .attendance-list-table th,
+  .attendance-page .attendance-list-table td {
+    padding: 6px 2px;
+    font-size: 0.72rem;
+  }
+
+  .attendance-page .attendance-list-table th:nth-child(1),
+  .attendance-page .attendance-list-table td:nth-child(1) {
+    width: 8%;
+  }
+
+  .attendance-page .attendance-list-table th:nth-child(2),
+  .attendance-page .attendance-list-table td:nth-child(2) {
+    width: 22%;
+  }
+
+  .attendance-page .attendance-list-table th:nth-child(3),
+  .attendance-page .attendance-list-table td:nth-child(3) {
+    width: 24%;
+  }
+
+  .attendance-page .attendance-list-table th:nth-child(4),
+  .attendance-page .attendance-list-table td:nth-child(4) {
+    width: 16%;
+  }
+
+  .attendance-page .attendance-list-table th:nth-child(5),
+  .attendance-page .attendance-list-table td:nth-child(5) {
+    width: 14%;
+  }
+
+  .attendance-page .attendance-list-table th:nth-child(6),
+  .attendance-page .attendance-list-table td:nth-child(6) {
+    width: 16%;
+  }
+
+  .attendance-page .attendance-list-date-full {
+    display: none;
+  }
+
+  .attendance-page .attendance-list-date-short {
+    display: inline;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .attendance-page .attendance-list-opponent-cell {
+    overflow: hidden;
+    max-width: 0;
+  }
+
+  .attendance-page .attendance-list-opponent {
+    gap: 4px;
+  }
+
+  .attendance-page .attendance-list-opponent .team-logo-inline {
+    width: 20px;
+    height: 20px;
+  }
+
+  .attendance-page .attendance-list-stadium {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 0;
+  }
+
+  .attendance-page .attendance-list-table td:nth-child(5) {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .attendance-page .attendance-list-result {
+    padding: 2px 4px;
+    font-size: 0.68rem;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .attendance-page .attendance-list-result--pending,
+  .attendance-page .attendance-list-result--none {
+    font-size: 0;
+    padding: 2px 5px;
+  }
+
+  .attendance-page .attendance-list-result--pending::after,
+  .attendance-page .attendance-list-result--none::after {
+    content: '전';
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #4b5563;
+  }
+
+  .attendance-page .attendance-list-table thead th:nth-child(6) {
+    font-size: 0.65rem;
+    letter-spacing: -0.02em;
+  }
+
+  .rankings-page .rankings-table-wrap {
+    overflow-x: hidden;
+  }
+
+  .rankings-podium {
+    gap: 6px;
+    margin-top: 16px;
+  }
+
+  .rankings-podium-medal {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+  }
+
+  .rankings-podium-slot--gold .rankings-podium-medal {
+    font-size: 3rem;
+  }
+
+  .rankings-podium-slot--gold .rankings-podium-block {
+    height: 88px;
+  }
+
+  .rankings-podium-slot--silver .rankings-podium-block {
+    height: 64px;
+  }
+
+  .rankings-podium-slot--bronze .rankings-podium-block {
+    height: 48px;
+  }
+
+  .rankings-podium-block {
+    font-size: 1.35rem;
+    border-radius: 8px 8px 0 0;
+  }
+
+  .rankings-podium-avatar--gold .rankings-podium-avatar-img,
+  .rankings-podium-avatar--gold .rankings-podium-avatar-fallback {
+    width: 64px;
+    height: 64px;
+  }
+
+  .rankings-podium-avatar--silver .rankings-podium-avatar-img,
+  .rankings-podium-avatar--silver .rankings-podium-avatar-fallback,
+  .rankings-podium-avatar--bronze .rankings-podium-avatar-img,
+  .rankings-podium-avatar--bronze .rankings-podium-avatar-fallback {
+    width: 52px;
+    height: 52px;
+  }
+
+  .rankings-podium-avatar-name {
+    font-size: 0.78rem;
+  }
+
+  .rankings-podium-avatar--gold .rankings-podium-avatar-name {
+    font-size: 0.86rem;
+  }
+
+  .rankings-podium-stats {
+    font-size: 0.72rem;
+    margin-bottom: 8px;
+  }
+
+  .rankings-sort-bar-button {
+    padding: 5px 10px;
+    font-size: 0.76rem;
+  }
+
+  .rankings-page .rankings-table th,
+  .rankings-page .rankings-table td {
+    padding: 6px 1px;
+    font-size: 0.72rem;
+  }
+
+  .rankings-page .rankings-table th:nth-child(1),
+  .rankings-page .rankings-table td:nth-child(1) {
+    width: 7%;
+  }
+
+  .rankings-page .rankings-table th:nth-child(2),
+  .rankings-page .rankings-table td:nth-child(2) {
+    width: 28%;
+  }
+
+  .rankings-page .rankings-table th:nth-child(n + 3),
+  .rankings-page .rankings-table td:nth-child(n + 3) {
+    width: 13%;
+  }
+
+  .rankings-page .rankings-table .rankings-user-avatar-wrap {
+    width: 26px;
+    height: 26px;
+  }
+
+  .rankings-page .rankings-table .rankings-user-avatar.user-avatar-fallback {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+
+  .rankings-page .rankings-table .rankings-user-cell {
+    gap: 4px;
+  }
+
+  .rankings-page .rankings-sort-button {
+    gap: 1px;
+    font-size: inherit;
+  }
+
+  .rankings-page .rankings-sort-icon--placeholder {
+    display: none;
+  }
+
+  .rankings-page .rankings-sort-icon {
+    font-size: 0.65em;
   }
 }
 
@@ -1911,5 +2742,46 @@ button {
   .app-main-nav .nav-link-logout {
     font-size: 0.78rem;
     padding: 8px 5px;
+  }
+
+  .rankings-page .rankings-table th,
+  .rankings-page .rankings-table td {
+    padding: 5px 0;
+    font-size: 0.68rem;
+  }
+
+  .rankings-page .rankings-table th:nth-child(2),
+  .rankings-page .rankings-table td:nth-child(2) {
+    width: 26%;
+  }
+
+  .rankings-page .rankings-table th:nth-child(n + 3),
+  .rankings-page .rankings-table td:nth-child(n + 3) {
+    width: 13.4%;
+  }
+
+  .attendance-page .calendar-opponent-emblem {
+    width: 20px;
+    height: 20px;
+  }
+
+  .attendance-page .calendar-emblem-placeholder {
+    width: 20px;
+    height: 20px;
+  }
+
+  .attendance-page .calendar-score-line {
+    font-size: 0.66rem;
+  }
+
+  .attendance-page .attendance-list-table th,
+  .attendance-page .attendance-list-table td {
+    padding: 5px 1px;
+    font-size: 0.68rem;
+  }
+
+  .attendance-page .attendance-list-opponent .team-logo-inline {
+    width: 18px;
+    height: 18px;
   }
 }

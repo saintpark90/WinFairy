@@ -1,5 +1,48 @@
 const KAKAO_AVATAR_SIZES = [64, 110, 160, 240, 320, 480, 640]
 
+const readDevicePixelRatio = () => {
+  if (typeof window === 'undefined') return 2
+  return Math.min(Math.max(window.devicePixelRatio || 1, 1), 3)
+}
+
+/** 표시 크기·DPR에 맞는 요청 해상도(px) */
+const resolveAvatarRequestPx = (displaySizePx, options = {}) => {
+  const dpr = options.devicePixelRatio ?? readDevicePixelRatio()
+  const minPx = options.minRequestPx ?? Math.min(displaySizePx, 64)
+  return Math.max(Math.round(displaySizePx * dpr), minPx)
+}
+
+const pickKakaoPreset = (targetPx, originalMax = 0) => {
+  const ceiling =
+    originalMax > 0
+      ? ([...KAKAO_AVATAR_SIZES].reverse().find((size) => size <= originalMax) ?? originalMax)
+      : (KAKAO_AVATAR_SIZES[KAKAO_AVATAR_SIZES.length - 1] ?? targetPx)
+
+  const withinCeiling = KAKAO_AVATAR_SIZES.filter((size) => size <= ceiling)
+  const atOrAbove = withinCeiling.find((size) => size >= targetPx)
+  if (atOrAbove) return atOrAbove
+
+  return withinCeiling[withinCeiling.length - 1] ?? ceiling
+}
+
+const resizeAvatarUrlToPx = (url, targetPx) => {
+  const kakaoReplaced = url.replace(
+    /img_(\d+)x(\d+)(q\d+)?/i,
+    (_match, w, h, qualitySuffix = '') => {
+      const originalMax = Math.max(parseInt(w, 10) || 0, parseInt(h, 10) || 0)
+      const preset = pickKakaoPreset(targetPx, originalMax)
+      return `img_${preset}x${preset}${qualitySuffix}`
+    },
+  )
+  if (kakaoReplaced !== url) return kakaoReplaced
+
+  if (/googleusercontent\.com/i.test(url)) {
+    return url.replace(/=s\d+(-c)?/i, `=s${targetPx}$1`)
+  }
+
+  return url
+}
+
 /** HTTPS 페이지에서 카카오 등 http 프로필 URL이 차단되지 않도록 보정 */
 const secureAvatarUrl = (url) => {
   if (!url || typeof url !== 'string') return ''
@@ -18,40 +61,52 @@ const secureAvatarUrl = (url) => {
 /**
  * 큰 원본 프로필 URL을 표시 크기에 맞는 해상도로 요청합니다 (카카오 CDN img_NxN 등).
  * @param {string} url
- * @param {number} displaySizePx 화면에 보이는 한 변(px). 레티나용 2배 해상도를 요청합니다.
+ * @param {number} displaySizePx 화면에 보이는 한 변(px)
+ * @param {object} [options]
+ * @param {number} [options.devicePixelRatio] 요청 배율 (기본: 기기 DPR, 최대 3)
+ * @param {number} [options.minRequestPx] 최소 요청 한 변(px). 기본은 displaySizePx와 64px 중 작은 값
  */
-export function optimizeAvatarUrl(url, displaySizePx = 40) {
+export function optimizeAvatarUrl(url, displaySizePx = 40, options = {}) {
   if (!url || typeof url !== 'string') return ''
   const trimmed = secureAvatarUrl(url)
   if (!trimmed) return ''
 
-  const targetPx = Math.max(Math.round(displaySizePx * 2), 80)
-  const pickPreset = () =>
-    KAKAO_AVATAR_SIZES.find((size) => size >= targetPx) ??
-    KAKAO_AVATAR_SIZES[KAKAO_AVATAR_SIZES.length - 1]
+  const targetPx = resolveAvatarRequestPx(displaySizePx, options)
+  return resizeAvatarUrlToPx(trimmed, targetPx)
+}
 
-  const kakaoReplaced = trimmed.replace(
-    /img_(\d+)x(\d+)(q\d+)?/i,
-    (_match, w, h, qualitySuffix = '') => {
-      const originalMax = Math.max(parseInt(w, 10) || 0, parseInt(h, 10) || 0)
-      let preset = pickPreset()
-      // 카카오 CDN은 URL에 없는 더 큰 해상도(img_240 등) 요청 시 404가 날 수 있음
-      if (originalMax > 0 && preset > originalMax) {
-        const capped =
-          [...KAKAO_AVATAR_SIZES].reverse().find((size) => size <= originalMax) ??
-          originalMax
-        preset = capped
-      }
-      return `img_${preset}x${preset}${qualitySuffix}`
-    },
-  )
-  if (kakaoReplaced !== trimmed) return kakaoReplaced
-
-  if (/googleusercontent\.com/i.test(trimmed)) {
-    return trimmed.replace(/=s\d+(-c)?/i, `=s${targetPx}$1`)
+/**
+ * 표시 크기에 맞는 1x·2x·3x srcSet 문자열 (과도한 원본 다운스케일 방지)
+ * @param {string} url
+ * @param {number} displaySizePx
+ * @returns {{ src: string, srcSet: string }}
+ */
+export function buildAvatarSrcSet(url, displaySizePx) {
+  if (!url || typeof url !== 'string') {
+    return { src: '', srcSet: '' }
   }
 
-  return trimmed
+  const densities = [1, 2, 3]
+  const seen = new Set()
+  const parts = []
+
+  for (const dpr of densities) {
+    const candidate = optimizeAvatarUrl(url, displaySizePx, {
+      devicePixelRatio: dpr,
+      minRequestPx: displaySizePx,
+    })
+    if (!candidate || seen.has(candidate)) continue
+    seen.add(candidate)
+    parts.push(`${candidate} ${dpr}x`)
+  }
+
+  const src =
+    optimizeAvatarUrl(url, displaySizePx, {
+      devicePixelRatio: 1,
+      minRequestPx: displaySizePx,
+    }) || parts[0]?.split(' ')[0] || ''
+
+  return { src, srcSet: parts.join(', ') }
 }
 
 const readIdentityAvatar = (user) => {

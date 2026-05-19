@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import WpaInfoHeader from '../components/WpaInfoHeader'
 import { supabase } from '../lib/supabase'
 import { buildDailyPlayerPicks, getKstDateKey } from '../lib/dailyPlayerPicks'
 import {
@@ -10,13 +11,19 @@ import {
   isMatchCancelled,
 } from '../lib/stats'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
+import { formatStadiumShort } from '../lib/stadiumShort'
 
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토']
 
-const formatRecentGameDate = (isoDate) => {
+const formatRecentGameDateTime = (isoDate, gameStartTime) => {
   const d = new Date(`${isoDate}T12:00:00`)
   const w = WEEKDAY_KO[d.getDay()]
-  return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, '0')} (${w})`
+  const datePart = `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, '0')}(${w})`
+  const time =
+    typeof gameStartTime === 'string' && gameStartTime.trim()
+      ? gameStartTime.trim()
+      : null
+  return time ? `${datePart} ${time}` : datePart
 }
 
 const recentGameResultLabel = (match) => {
@@ -88,24 +95,6 @@ const formatStatValue = (value, digits = 3) => {
   return String(value)
 }
 
-const WpaInfoHeader = () => (
-  <span className="top5-header-with-tip">
-    WPA
-    <span
-      className="top5-info-tip"
-      role="button"
-      tabIndex={0}
-      aria-label="WPA 안내"
-    >
-      ?
-      <span className="top5-info-tip-bubble" role="tooltip">
-        경기 WPA(Win Probability Added, 승리 확률 기여도)입니다. KBO 키플레이어 API의
-        경기 단위 값을 직관한 경기별로 합산합니다.
-      </span>
-    </span>
-  </span>
-)
-
 const formatOpponentRuns = (row) =>
   row.scoredGames > 0 ? row.runsScored : '-'
 
@@ -132,7 +121,7 @@ const StatSection = ({
         <thead>
           <tr>
             {showRank ? <th className="stat-rank-col">순위</th> : null}
-            <th>구분</th>
+            <th className="stat-label-col">구분</th>
             <th>경기</th>
             <th>승</th>
             <th>패</th>
@@ -154,7 +143,7 @@ const StatSection = ({
             return (
               <tr key={row.label}>
                 {showRank ? <td className="stat-rank-col">{index + 1}</td> : null}
-                <td>
+                <td className="stat-label-col">
                   {showTeamLogoInLabel ? (
                     <span className="team-label-cell">
                       {logoUrl ? (
@@ -316,31 +305,31 @@ function HomePage({ userId, userDisplayName }) {
                     className="recent-game-line recent-game-line--header"
                     aria-hidden="true"
                   >
-                    <span className="recent-game-colhead">날짜</span>
-                    <span className="recent-game-colhead">경기시간</span>
+                    <span className="recent-game-colhead">일시</span>
                     <span className="recent-game-colhead">경기장</span>
                     <span className="recent-game-colhead">상대</span>
                     <span className="recent-game-colhead recent-game-colhead--center">
                       스코어
                     </span>
                     <span className="recent-game-colhead recent-game-colhead--end">
-                      경기결과
+                      <span className="recent-game-colhead-full">경기결과</span>
+                      <span className="recent-game-colhead-short">결과</span>
                     </span>
                   </div>
                   <ul className="recent-games-list">
                   {recentFiveGames.map((m) => {
                     const logoUrl = getOpponentTeamLogoUrl(m.opponent_team)
-                    const timeText =
-                      typeof m.game_start_time === 'string' && m.game_start_time.trim()
-                        ? m.game_start_time.trim()
-                        : '–'
                     const kind = getMatchResultKind(m)
                     return (
                       <li key={m.id ?? m.game_date} className="recent-game-line">
-                        <span className="recent-game-date">{formatRecentGameDate(m.game_date)}</span>
-                        <span className="recent-game-time">{timeText}</span>
+                        <span
+                          className="recent-game-datetime"
+                          title={formatRecentGameDateTime(m.game_date, m.game_start_time)}
+                        >
+                          {formatRecentGameDateTime(m.game_date, m.game_start_time)}
+                        </span>
                         <span className="recent-game-stadium" title={m.stadium ?? ''}>
-                          {m.stadium ?? '–'}
+                          {formatStadiumShort(m.stadium)}
                         </span>
                         <span
                           className="recent-game-opponent"
@@ -409,6 +398,7 @@ function HomePage({ userId, userDisplayName }) {
           <StatSection
             title="상대팀 별 승률"
             rows={stats.byOpponent}
+            sectionClassName="stat-card-opponent"
             showTeamLogoInLabel
             showRank
             showRunsColumns
@@ -443,8 +433,8 @@ function HomePage({ userId, userDisplayName }) {
                   <table className="top5-table">
                     <thead>
                       <tr>
-                        <th>순위</th>
-                        <th>선수</th>
+                        <th className="top5-rank-col">순위</th>
+                        <th className="top5-player-col">선수</th>
                         <th>
                           <WpaInfoHeader />
                         </th>
@@ -459,7 +449,7 @@ function HomePage({ userId, userDisplayName }) {
                     <tbody>
                       {stats.topBatters.map((player, index) => (
                         <tr key={player.playerName}>
-                          <td>{index + 1}</td>
+                          <td className="top5-rank-col">{index + 1}</td>
                           <td className="top5-player-name">{player.playerName}</td>
                           <td>{formatWpa(player.wpa)}</td>
                           <td>{formatBattingAvg(player.battingAvg)}</td>
@@ -487,8 +477,8 @@ function HomePage({ userId, userDisplayName }) {
                   <table className="top5-table">
                     <thead>
                       <tr>
-                        <th>순위</th>
-                        <th>선수</th>
+                        <th className="top5-rank-col">순위</th>
+                        <th className="top5-player-col">선수</th>
                         <th>
                           <WpaInfoHeader />
                         </th>
@@ -503,7 +493,7 @@ function HomePage({ userId, userDisplayName }) {
                     <tbody>
                       {stats.topPitchers.map((player, index) => (
                         <tr key={player.playerName}>
-                          <td>{index + 1}</td>
+                          <td className="top5-rank-col">{index + 1}</td>
                           <td className="top5-player-name">{player.playerName}</td>
                           <td>{formatWpa(player.wpa)}</td>
                           <td>{formatStatValue(player.era, 2)}</td>

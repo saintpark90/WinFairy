@@ -2,9 +2,81 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchAttendanceLeaderboard } from '../lib/leaderboard'
 import { LEADERBOARD_UPDATED_EVENT } from '../lib/refreshLeaderboard'
 import { supabase } from '../lib/supabase'
-import { optimizeAvatarUrl } from '../lib/userDisplay'
+import { optimizeAvatarUrl, normalizeAvatarUrl } from '../lib/userDisplay'
 
 const RANKINGS_AVATAR_PX = 40
+const PODIUM_AVATAR_PX = { gold: 72, silver: 58, bronze: 58 }
+
+const PODIUM_LAYOUT = [
+  { place: 2, medal: '🥈', modifier: 'silver' },
+  { place: 1, medal: '🥇', modifier: 'gold' },
+  { place: 3, medal: '🥉', modifier: 'bronze' },
+]
+
+const SORTABLE_COLUMNS = [
+  { key: 'games', label: '경기' },
+  { key: 'wins', label: '승' },
+  { key: 'losses', label: '패' },
+  { key: 'draws', label: '무' },
+  { key: 'win_rate', label: '승률' },
+]
+
+/** 동률 시 2·3차 정렬 (방향: asc | desc) */
+const SORT_TIE_BREAKERS = {
+  wins: [
+    ['losses', 'asc'],
+    ['draws', 'asc'],
+  ],
+  losses: [
+    ['wins', 'asc'],
+    ['draws', 'asc'],
+  ],
+  draws: [
+    ['wins', 'desc'],
+    ['losses', 'asc'],
+  ],
+  win_rate: [
+    ['wins', 'desc'],
+    ['losses', 'asc'],
+    ['draws', 'asc'],
+  ],
+}
+
+const compareField = (a, b, field, direction) => {
+  const diff = a[field] - b[field]
+  if (diff === 0) return 0
+  return direction === 'desc' ? -diff : diff
+}
+
+const compareRankedRows = (a, b, sortKey, sortDir) => {
+  const primaryDir = sortDir === 'desc' ? 'desc' : 'asc'
+  let result = compareField(a, b, sortKey, primaryDir)
+  if (result !== 0) return result
+
+  for (const [field, direction] of SORT_TIE_BREAKERS[sortKey] ?? []) {
+    result = compareField(a, b, field, direction)
+    if (result !== 0) return result
+  }
+
+  return String(a.display_name).localeCompare(String(b.display_name), 'ko')
+}
+
+const formatPodiumStat = (row, sortKey) => {
+  switch (sortKey) {
+    case 'games':
+      return `${row.games}경기`
+    case 'wins':
+      return `${row.wins}승`
+    case 'losses':
+      return `${row.losses}패`
+    case 'draws':
+      return `${row.draws}무`
+    case 'win_rate':
+      return `${row.win_rate.toFixed(1)}%`
+    default:
+      return `${row.wins}승`
+  }
+}
 
 function RankingsUserCell({ displayName, avatarUrl }) {
   const [imgFailed, setImgFailed] = useState(false)
@@ -42,13 +114,171 @@ function RankingsUserCell({ displayName, avatarUrl }) {
   )
 }
 
-const SORTABLE_COLUMNS = [
-  { key: 'games', label: '경기' },
-  { key: 'wins', label: '승' },
-  { key: 'losses', label: '패' },
-  { key: 'draws', label: '무' },
-  { key: 'win_rate', label: '승률' },
-]
+function RankingsPodiumAvatar({ displayName, avatarUrl, modifier }) {
+  const [imgStage, setImgStage] = useState(0)
+  const name = displayName || '회원'
+  const initial = name.slice(0, 1)
+  const avatarPx = modifier === 'gold' ? PODIUM_AVATAR_PX.gold : PODIUM_AVATAR_PX.silver
+
+  const avatarCandidates = useMemo(() => {
+    const secured = normalizeAvatarUrl(avatarUrl)
+    const dpr =
+      typeof window !== 'undefined'
+        ? Math.min(Math.max(window.devicePixelRatio || 1, 1), 2)
+        : 2
+
+    return [
+      optimizeAvatarUrl(avatarUrl, avatarPx, {
+        devicePixelRatio: dpr,
+        minRequestPx: avatarPx,
+      }),
+      optimizeAvatarUrl(avatarUrl, avatarPx, {
+        devicePixelRatio: 1,
+        minRequestPx: avatarPx,
+      }),
+      secured,
+    ].filter((candidate, index, list) => candidate && list.indexOf(candidate) === index)
+  }, [avatarUrl, avatarPx])
+
+  useEffect(() => {
+    setImgStage(0)
+  }, [avatarUrl, avatarPx])
+
+  const avatarSrc = avatarCandidates[imgStage] ?? ''
+  const showImage = Boolean(avatarSrc) && imgStage < avatarCandidates.length
+
+  const handleImageError = () => {
+    setImgStage((prev) => prev + 1)
+  }
+
+  return (
+    <div className={`rankings-podium-avatar rankings-podium-avatar--${modifier}`}>
+      {showImage ? (
+        <img
+          key={avatarSrc}
+          className="rankings-podium-avatar-img"
+          src={avatarSrc}
+          alt=""
+          width={avatarPx}
+          height={avatarPx}
+          loading="eager"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={handleImageError}
+        />
+      ) : (
+        <span className="rankings-podium-avatar-fallback" aria-hidden="true">
+          {initial}
+        </span>
+      )}
+      <span className="rankings-podium-avatar-name">{name}</span>
+    </div>
+  )
+}
+
+function RankingsPodiumSlot({ place, medal, modifier, row, userId, sortKey }) {
+  const isMe = Boolean(userId && row?.user_id === userId)
+
+  return (
+    <div
+      className={[
+        'rankings-podium-slot',
+        `rankings-podium-slot--${modifier}`,
+        row ? '' : 'rankings-podium-slot--empty',
+        isMe ? 'rankings-podium-slot--me' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+    >
+      <div className="rankings-podium-medal" aria-hidden="true">
+        {medal}
+      </div>
+      {row ? (
+        <>
+          <RankingsPodiumAvatar
+            displayName={row.display_name}
+            avatarUrl={row.avatar_url}
+            modifier={modifier}
+          />
+          <p className="rankings-podium-stats">
+            <span>{formatPodiumStat(row, sortKey)}</span>
+          </p>
+        </>
+      ) : (
+        <div className="rankings-podium-placeholder">
+          <span className="rankings-podium-placeholder-avatar" aria-hidden="true">
+            —
+          </span>
+          <span className="rankings-podium-placeholder-name">—</span>
+        </div>
+      )}
+      <div className="rankings-podium-block" aria-label={`${place}위`}>
+        {place}
+      </div>
+    </div>
+  )
+}
+
+function RankingsPodium({ topThree, userId, sortKey }) {
+  return (
+    <div className="rankings-podium" aria-label="1위부터 3위까지 시상대">
+      {PODIUM_LAYOUT.map(({ place, medal, modifier }) => (
+        <RankingsPodiumSlot
+          key={place}
+          place={place}
+          medal={medal}
+          modifier={modifier}
+          row={topThree[place - 1] ?? null}
+          userId={userId}
+          sortKey={sortKey}
+        />
+      ))}
+    </div>
+  )
+}
+
+function RankingsSortBar({ sortKey, sortDir, onSort }) {
+  return (
+    <div className="rankings-sort-bar" role="group" aria-label="정렬 기준">
+      {SORTABLE_COLUMNS.map((column) => {
+        const active = sortKey === column.key
+        return (
+          <button
+            key={column.key}
+            type="button"
+            className={`rankings-sort-bar-button${active ? ' rankings-sort-bar-button--active' : ''}`}
+            onClick={() => onSort(column.key)}
+            aria-pressed={active}
+          >
+            {column.label}
+            {active ? (
+              <span className="rankings-sort-bar-icon" aria-hidden="true">
+                {sortDir === 'desc' ? '▼' : '▲'}
+              </span>
+            ) : null}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function RankingsTableRow({ row, userId }) {
+  const isMe = Boolean(userId && row.user_id === userId)
+  return (
+    <tr className={isMe ? 'rankings-row-me' : undefined}>
+      <td>{row.rank}</td>
+      <td>
+        <RankingsUserCell displayName={row.display_name} avatarUrl={row.avatar_url} />
+      </td>
+      <td>{row.games}</td>
+      <td>{row.wins}</td>
+      <td>{row.losses}</td>
+      <td>{row.draws}</td>
+      <td>{row.win_rate.toFixed(1)}%</td>
+    </tr>
+  )
+}
 
 function SortableHeader({ column, sortKey, sortDir, onSort }) {
   const active = sortKey === column.key
@@ -137,12 +367,7 @@ function RankingsPage({ userId }) {
       win_rate: Number(row.win_rate),
     }))
 
-    const direction = sortDir === 'desc' ? -1 : 1
-    prepared.sort((a, b) => {
-      const diff = a[sortKey] - b[sortKey]
-      if (diff !== 0) return diff * direction
-      return String(a.display_name).localeCompare(String(b.display_name), 'ko')
-    })
+    prepared.sort((a, b) => compareRankedRows(a, b, sortKey, sortDir))
 
     return prepared.map((row, index) => ({
       ...row,
@@ -150,11 +375,25 @@ function RankingsPage({ userId }) {
     }))
   }, [rows, sortKey, sortDir])
 
+  const isDrawsSortWithNoDraws = useMemo(
+    () =>
+      sortKey === 'draws' &&
+      rankedRows.length > 0 &&
+      rankedRows.every((row) => row.draws === 0),
+    [sortKey, rankedRows],
+  )
+
+  const showPodium = !isDrawsSortWithNoDraws && rankedRows.length > 0
+  const podiumRows = useMemo(
+    () => (isDrawsSortWithNoDraws ? [] : rankedRows.slice(0, 3)),
+    [rankedRows, isDrawsSortWithNoDraws],
+  )
+
   return (
     <section className="rankings-page">
-      <div className="card">
+      <div className="card" style={{ textAlign: 'center' }}>
         <h2>승리기운 순위</h2>
-        <p className="muted">
+        <p className="muted" style={{ textAlign: 'center' }}>
           수다방에서 누가 가장 승리요정일까요?
         </p>
 
@@ -166,49 +405,46 @@ function RankingsPage({ userId }) {
         ) : null}
 
         {!loading && !error && rankedRows.length ? (
-          <div className="table-wrap rankings-table-wrap">
-            <table className="rankings-table">
-              <thead>
-                <tr>
-                  <th scope="col">순위</th>
-                  <th scope="col">닉네임</th>
-                  {SORTABLE_COLUMNS.map((column) => (
-                    <SortableHeader
-                      key={column.key}
-                      column={column}
-                      sortKey={sortKey}
-                      sortDir={sortDir}
-                      onSort={handleSort}
-                    />
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rankedRows.map((row) => {
-                  const isMe = Boolean(userId && row.user_id === userId)
-                  return (
-                    <tr
-                      key={row.user_id}
-                      className={isMe ? 'rankings-row-me' : undefined}
-                    >
-                      <td>{row.rank}</td>
-                      <td>
-                        <RankingsUserCell
-                          displayName={row.display_name}
-                          avatarUrl={row.avatar_url}
+          <>
+            <RankingsSortBar sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+
+            {isDrawsSortWithNoDraws ? (
+              <p className="rankings-no-draws-notice" role="status">
+                아직 무승부 기록이 없습니다.
+              </p>
+            ) : null}
+
+            {showPodium ? (
+              <RankingsPodium topThree={podiumRows} userId={userId} sortKey={sortKey} />
+            ) : null}
+
+            {rankedRows.length ? (
+              <div className="table-wrap rankings-table-wrap">
+                <table className="rankings-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">순위</th>
+                      <th scope="col">닉네임</th>
+                      {SORTABLE_COLUMNS.map((column) => (
+                        <SortableHeader
+                          key={column.key}
+                          column={column}
+                          sortKey={sortKey}
+                          sortDir={sortDir}
+                          onSort={handleSort}
                         />
-                      </td>
-                      <td>{row.games}</td>
-                      <td>{row.wins}</td>
-                      <td>{row.losses}</td>
-                      <td>{row.draws}</td>
-                      <td>{row.win_rate.toFixed(1)}%</td>
+                      ))}
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {rankedRows.map((row) => (
+                      <RankingsTableRow key={row.user_id} row={row} userId={userId} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
     </section>

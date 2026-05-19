@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import WpaInfoHeader from './WpaInfoHeader'
 import {
   buildAllAttendancePlayers,
   formatBattingAvg,
@@ -8,24 +9,6 @@ import {
 } from '../lib/stats'
 
 const TOP_LIMIT = 10
-
-const WpaInfoHeader = () => (
-  <span className="top5-header-with-tip">
-    WPA
-    <span
-      className="top5-info-tip"
-      role="button"
-      tabIndex={0}
-      aria-label="WPA 안내"
-    >
-      ?
-      <span className="top5-info-tip-bubble" role="tooltip">
-        경기 WPA(Win Probability Added, 승리 확률 기여도)입니다. KBO 키플레이어 API의
-        경기 단위 값을 직관한 경기별로 합산합니다.
-      </span>
-    </span>
-  </span>
-)
 
 function BatterTable({ players, rankByList }) {
   if (!players.length) {
@@ -37,8 +20,8 @@ function BatterTable({ players, rankByList }) {
       <table className="top5-table">
         <thead>
           <tr>
-            <th>순위</th>
-            <th>선수</th>
+            <th className="top5-rank-col">순위</th>
+            <th className="top5-player-col">선수</th>
             <th>
               <WpaInfoHeader />
             </th>
@@ -58,7 +41,7 @@ function BatterTable({ players, rankByList }) {
             const rank = rankIndex >= 0 ? rankIndex + 1 : '–'
             return (
               <tr key={player.playerName}>
-                <td>{rank}</td>
+                <td className="top5-rank-col">{rank}</td>
                 <td className="top5-player-name">{player.playerName}</td>
                 <td>{formatWpa(player.wpa)}</td>
                 <td>{formatBattingAvg(player.battingAvg)}</td>
@@ -86,8 +69,8 @@ function PitcherTable({ players, rankByList }) {
       <table className="top5-table">
         <thead>
           <tr>
-            <th>순위</th>
-            <th>선수</th>
+            <th className="top5-rank-col">순위</th>
+            <th className="top5-player-col">선수</th>
             <th>
               <WpaInfoHeader />
             </th>
@@ -107,7 +90,7 @@ function PitcherTable({ players, rankByList }) {
             const rank = rankIndex >= 0 ? rankIndex + 1 : '–'
             return (
               <tr key={player.playerName}>
-                <td>{rank}</td>
+                <td className="top5-rank-col">{rank}</td>
                 <td className="top5-player-name">{player.playerName}</td>
                 <td>{formatWpa(player.wpa)}</td>
                 <td>{formatEra(player.era)}</td>

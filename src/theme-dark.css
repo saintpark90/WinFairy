@@ -50,6 +50,7 @@ html[data-theme='dark'] body {
 
 [data-theme='dark'] .profile-name,
 [data-theme='dark'] .recent-game-date,
+[data-theme='dark'] .recent-game-datetime,
 [data-theme='dark'] .recent-game-score,
 [data-theme='dark'] .big-number,
 [data-theme='dark'] h2,
@@ -76,6 +77,91 @@ html[data-theme='dark'] body {
 [data-theme='dark'] .recent-game-line--header {
   border-bottom-color: #475569;
   color: #94a3b8;
+}
+
+[data-theme='dark'] .stat-card-opponent .stat-rank-col,
+[data-theme='dark'] .stat-card-opponent .stat-label-col,
+[data-theme='dark'] .stat-card-opponent tbody .stat-label-col {
+  background: #1a2332;
+}
+
+[data-theme='dark'] .stat-card-opponent thead .stat-rank-col,
+[data-theme='dark'] .stat-card-opponent thead .stat-label-col {
+  background: #243044;
+}
+
+[data-theme='dark'] .top5-table .top5-rank-col,
+[data-theme='dark'] .top5-table .top5-player-col,
+[data-theme='dark'] .top5-table .top5-player-name {
+  background: #1a2332;
+}
+
+[data-theme='dark'] .top5-table thead .top5-rank-col,
+[data-theme='dark'] .top5-table thead .top5-player-col {
+  background: #243044;
+}
+
+[data-theme='dark'] .rankings-sort-bar-button {
+  background: #1a2332;
+  border-color: #475569;
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .rankings-sort-bar-button:hover {
+  border-color: #fb923c;
+  color: #fdba74;
+}
+
+[data-theme='dark'] .rankings-sort-bar-button--active {
+  border-color: #fb923c;
+  background: rgba(255, 125, 44, 0.15);
+  color: #fdba74;
+}
+
+[data-theme='dark'] .rankings-table-heading {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .rankings-no-draws-notice {
+  border-color: #854d0e;
+  background: #422006;
+  color: #fde68a;
+}
+
+[data-theme='dark'] .rankings-podium-stats {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .rankings-podium-slot--me .rankings-podium-stats {
+  color: #fdba74;
+}
+
+[data-theme='dark'] .rankings-podium-placeholder-avatar {
+  border-color: #475569;
+  color: #64748b;
+}
+
+[data-theme='dark'] .rankings-podium-placeholder-name {
+  color: #64748b;
+}
+
+[data-theme='dark'] .rankings-podium-slot--me {
+  outline-color: #fb923c;
+}
+
+[data-theme='dark'] .rankings-podium-avatar-img,
+[data-theme='dark'] .rankings-podium-avatar-fallback {
+  border-color: #475569;
+  background: #243044;
+}
+
+[data-theme='dark'] .rankings-podium-avatar-fallback {
+  background: #422006;
+  color: #fdba74;
+}
+
+[data-theme='dark'] .rankings-podium-avatar-name {
+  color: #f1f5f9;
 }
 
 [data-theme='dark'] .top5-table th,
@@ -163,12 +249,35 @@ html[data-theme='dark'] body {
 [data-theme='dark'] .top5-info-tip {
   background: #334155;
   color: #e2e8f0;
+  border-color: #475569;
+}
+
+[data-theme='dark'] .top5-info-tip--open {
+  background: #422006;
+  color: #fdba74;
+  border-color: #fb923c;
 }
 
 [data-theme='dark'] .top5-info-tip-bubble {
   background: #1e293b;
-  border-color: #475569;
+  border: 1px solid #475569;
   color: #e2e8f0;
+}
+
+[data-theme='dark'] .top5-info-tip-section-title {
+  color: #fcd34d;
+}
+
+[data-theme='dark'] .top5-info-tip-formula {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .top5-info-tip-note {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .top5-info-tip-code {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 [data-theme='dark'] input,
@@ -249,6 +358,15 @@ html[data-theme='dark'] body {
 
 [data-theme='dark'] .calendar-score-line {
   color: #e2e8f0;
+}
+
+[data-theme='dark'] .attendance-page .calendar-result-under-emblem--pending::after {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .attendance-page .attendance-list-result--pending::after,
+[data-theme='dark'] .attendance-page .attendance-list-result--none::after {
+  color: #94a3b8;
 }
 
 [data-theme='dark'] .login-screen {
