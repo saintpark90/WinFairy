@@ -8,13 +8,16 @@
 .login-shell {
   box-sizing: border-box;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-height: 100svh;
 }
 
 .app-shell.login-shell {
   max-width: none;
   width: 100%;
+  min-height: 100svh;
 }
 
 .login-theme-toggle-wrap {
@@ -1818,10 +1821,12 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* 세로 9:16 스마트폰 프레임 비율 — PC에서는 더 크게(높이 기준), 상한은 넓은 화면용 */
+  flex-shrink: 0;
+  /* svh: 키보드가 올라와도 프레임 크기 유지 (dvh는 키보드에 따라 줄어듦) */
   aspect-ratio: 9 / 16;
-  width: min(560px, calc((min(94dvh, 100dvh - 24px)) * 9 / 16), calc(100vw - 32px));
-  max-height: min(94dvh, calc((100vw - 32px) * 16 / 9));
+  width: min(560px, calc((min(94svh, 100svh - 24px)) * 9 / 16), calc(100vw - 32px));
+  height: min(94svh, calc((100vw - 32px) * 16 / 9));
+  max-height: min(94svh, calc((100vw - 32px) * 16 / 9));
   padding: clamp(20px, 4.5vw, 36px) clamp(16px, 4.5vw, 28px);
   border-radius: 20px;
   background: linear-gradient(165deg, #fffdfb 0%, #fff4e6 45%, #ffe8d4 100%);
@@ -2656,6 +2661,25 @@ button {
 
   .app-shell {
     padding: 12px;
+  }
+
+  .app-shell.login-shell {
+    height: 100svh;
+    max-height: 100svh;
+    min-height: 100svh;
+    padding: 12px;
+    overflow: hidden;
+    justify-content: center;
+  }
+
+  .login-screen {
+    width: min(calc(100vw - 24px), calc(94svh * 9 / 16));
+    height: min(94svh, calc((100vw - 24px) * 16 / 9));
+    max-height: 94svh;
+  }
+
+  .app-tail.login-tail {
+    flex-shrink: 0;
   }
 
   .app-top-bar {
