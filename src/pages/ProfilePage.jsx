@@ -9,7 +9,7 @@ import { supabase } from '../lib/supabase'
 
 const PROFILE_AVATAR_PX = 88
 
-function ProfilePage({ user, onAccountDeleted }) {
+function ProfilePage({ user, onSignOut, onAccountDeleted }) {
   const { displayName: sessionDisplayName } = getUserDisplayFields(user)
   const [profileRow, setProfileRow] = useState(null)
   const [imgFailed, setImgFailed] = useState(false)
@@ -118,6 +118,12 @@ function ProfilePage({ user, onAccountDeleted }) {
               </p>
             ) : null}
           </div>
+        </div>
+
+        <div className="profile-logout-section">
+          <button type="button" className="profile-logout-button" onClick={onSignOut}>
+            로그아웃
+          </button>
         </div>
 
         <div className="profile-delete-section">

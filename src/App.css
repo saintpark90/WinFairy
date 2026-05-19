@@ -17,6 +17,110 @@
   width: 100%;
 }
 
+.login-theme-toggle-wrap {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+}
+
+.app-tail {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.app-tail.login-tail {
+  margin-top: auto;
+  width: 100%;
+  padding-top: 14px;
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+.app-tail-link {
+  display: inline-block;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.app-tail-link:hover {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.privacy-shell {
+  padding-bottom: 32px;
+}
+
+.privacy-header {
+  margin-bottom: 16px;
+}
+
+.privacy-back-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.privacy-back-link:hover {
+  color: #ea580c;
+}
+
+.privacy-title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.privacy-policy-card {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.privacy-effective {
+  margin: 0 0 16px;
+  font-size: 0.88rem;
+}
+
+.privacy-policy-card section {
+  margin-top: 24px;
+}
+
+.privacy-policy-card h2 {
+  margin: 0 0 10px;
+  font-size: 1.08rem;
+}
+
+.privacy-policy-card h3 {
+  margin: 14px 0 8px;
+  font-size: 0.98rem;
+}
+
+.privacy-policy-card p,
+.privacy-policy-card li {
+  line-height: 1.65;
+  color: #374151;
+}
+
+.privacy-policy-card ul {
+  margin: 8px 0;
+  padding-left: 1.25rem;
+}
+
+.privacy-table th,
+.privacy-table td {
+  font-size: 0.88rem;
+  vertical-align: top;
+}
+
 .app-top-bar {
   display: flex;
   flex-wrap: wrap;
@@ -44,14 +148,30 @@
   min-width: 0;
 }
 
-.nav-link-logout {
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
   border: 0;
+  border-radius: 10px;
+  background: #f3f4f6;
+  color: #374151;
   cursor: pointer;
-  font: inherit;
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-link-logout:hover {
-  filter: brightness(0.95);
+.theme-toggle:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid #ff7d2c;
+  outline-offset: 2px;
 }
 
 .user-avatar {
@@ -144,6 +264,27 @@ span.profile-avatar-large.user-avatar-fallback {
 .profile-email-label {
   font-weight: 600;
   color: #4b5563;
+}
+
+.profile-logout-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.profile-logout-button {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-logout-button:hover {
+  background: #e5e7eb;
 }
 
 .profile-delete-section {
@@ -1221,6 +1362,7 @@ button {
 }
 
 .login-screen {
+  position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

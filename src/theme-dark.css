@@ -1,0 +1,374 @@
+html[data-theme='dark'],
+html[data-theme='dark'] body {
+  color: #e2e8f0;
+  background-color: #0f1419;
+}
+
+[data-theme='dark'] .app-top-bar {
+  background: #1a2332;
+  border-color: #334155;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .logo {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .nav-link {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .nav-link.active {
+  background: #ff7d2c;
+  color: #ffffff;
+}
+
+[data-theme='dark'] .theme-toggle {
+  background: #334155;
+  color: #fbbf24;
+}
+
+[data-theme='dark'] .theme-toggle:hover {
+  background: #475569;
+  color: #fde68a;
+}
+
+[data-theme='dark'] .card,
+[data-theme='dark'] .hero-card {
+  background: #1a2332;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .muted,
+[data-theme='dark'] .top5-hint,
+[data-theme='dark'] .attendance-intro,
+[data-theme='dark'] .calendar-legend,
+[data-theme='dark'] .team-stats-hero .muted {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .profile-name,
+[data-theme='dark'] .recent-game-date,
+[data-theme='dark'] .recent-game-score,
+[data-theme='dark'] .big-number,
+[data-theme='dark'] h2,
+[data-theme='dark'] h3 {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .profile-welcome,
+[data-theme='dark'] .recent-game-time,
+[data-theme='dark'] .recent-game-stadium,
+[data-theme='dark'] .recent-game-opponent-name {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .user-avatar-fallback {
+  background: #422006;
+  color: #fdba74;
+}
+
+[data-theme='dark'] .recent-game-line {
+  border-bottom-color: #334155;
+}
+
+[data-theme='dark'] .recent-game-line--header {
+  border-bottom-color: #475569;
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .top5-table th,
+[data-theme='dark'] .top5-table td,
+[data-theme='dark'] .rankings-table th,
+[data-theme='dark'] .rankings-table td,
+[data-theme='dark'] .team-stats-table th,
+[data-theme='dark'] .team-stats-table td,
+[data-theme='dark'] .attendance-list-table th,
+[data-theme='dark'] .attendance-list-table td,
+[data-theme='dark'] .table-wrap > table th,
+[data-theme='dark'] .table-wrap > table td {
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] th.stat-rank-col,
+[data-theme='dark'] td.stat-rank-col {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .top5-table thead th,
+[data-theme='dark'] .rankings-table thead th,
+[data-theme='dark'] .attendance-list-table thead th,
+[data-theme='dark'] .table-wrap > table thead th {
+  background: #243044;
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .table-wrap > table thead th.stat-rank-col,
+[data-theme='dark'] .top5-table thead th:first-child {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .rankings-sort-button {
+  color: inherit;
+}
+
+[data-theme='dark'] .rankings-sort-button:hover {
+  background: #334155;
+}
+
+[data-theme='dark'] .rankings-row-me {
+  background: rgba(255, 125, 44, 0.12);
+}
+
+[data-theme='dark'] .team-stats-row-mine {
+  background: rgba(255, 125, 44, 0.1);
+}
+
+[data-theme='dark'] .team-stats-row-all {
+  background: rgba(148, 163, 184, 0.08);
+}
+
+[data-theme='dark'] .team-stats-compare-table thead th:first-child,
+[data-theme='dark'] .team-stats-compare-table tbody th[scope='row'] {
+  background: #243044;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .team-stats-player-search-input {
+  background: #0f1419;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .team-stats-player-search-input:focus {
+  border-color: #fb923c;
+}
+
+[data-theme='dark'] .team-stats-top10-heading,
+[data-theme='dark'] .player-search-results-title {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .team-stats-player-search-label,
+[data-theme='dark'] .player-search-results-subtitle {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .player-search-results {
+  border-bottom-color: #334155;
+}
+
+[data-theme='dark'] .top5-info-tip {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .top5-info-tip-bubble {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] input,
+[data-theme='dark'] .calendar-month-jump input[type='month'] {
+  background: #0f1419;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell {
+  background: #1a2332;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--result-win {
+  background: #1e3a5f;
+  border-color: #3b82f6;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--result-loss {
+  background: #4a2512;
+  border-color: #ea580c;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--result-loss .calendar-day-number,
+[data-theme='dark'] .attendance-page .calendar-cell--result-loss .calendar-game-time {
+  color: #fef3c7;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--result-draw,
+[data-theme='dark'] .attendance-page .calendar-cell--result-cancelled {
+  background: #243044;
+  border-color: #475569;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--result-pending {
+  background: #1a2332;
+  border-color: #334155;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--public-holiday {
+  background: #3f1d1d;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--memorial-day {
+  background: #243044;
+}
+
+[data-theme='dark'] .attendance-page .calendar-cell--home-game {
+  border-color: #fb923c;
+}
+
+[data-theme='dark'] .calendar-legend {
+  border-top-color: #334155;
+}
+
+[data-theme='dark'] .calendar-legend-swatch--home {
+  background: #1a2332;
+}
+
+[data-theme='dark'] .calendar-month-arrow {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .calendar-month-arrow:hover:not(:disabled) {
+  background: #475569;
+}
+
+[data-theme='dark'] .calendar-month-title {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .calendar-day-label {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .calendar-score-line {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .login-screen {
+  background: linear-gradient(165deg, #1a2332 0%, #1e293b 45%, #0f172a 100%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme='dark'] .login-title {
+  color: #f8fafc;
+}
+
+[data-theme='dark'] .login-tagline,
+[data-theme='dark'] .login-description {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .login-participation-input {
+  background: #0f1419;
+  border-color: #475569;
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] .profile-logout-section {
+  border-top-color: #334155;
+}
+
+[data-theme='dark'] .profile-logout-button {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .profile-logout-button:hover {
+  background: #475569;
+}
+
+[data-theme='dark'] .profile-delete-section {
+  border-top-color: #334155;
+}
+
+[data-theme='dark'] .profile-delete-account-button {
+  background: #450a0a;
+  color: #fecaca;
+}
+
+[data-theme='dark'] .profile-delete-account-button:hover:not(:disabled) {
+  background: #7f1d1d;
+}
+
+[data-theme='dark'] .rankings-user-avatar-wrap,
+[data-theme='dark'] .profile-avatar-wrap {
+  background: #243044;
+  border-color: #475569;
+}
+
+[data-theme='dark'] .attendance-list-row--win {
+  background: #1e3a5f;
+}
+
+[data-theme='dark'] .attendance-list-row--loss {
+  background: #4a2512;
+}
+
+[data-theme='dark'] .attendance-list-row--draw,
+[data-theme='dark'] .attendance-list-row--cancelled {
+  background: #243044;
+}
+
+[data-theme='dark'] .attendance-list-row--pending,
+[data-theme='dark'] .attendance-list-row--none {
+  background: #1a2332;
+}
+
+[data-theme='dark'] .app-tail {
+  border-top-color: #334155;
+}
+
+[data-theme='dark'] .app-tail.login-tail {
+  border-top-color: #475569;
+}
+
+[data-theme='dark'] .app-tail-link {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .app-tail-link:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='dark'] .privacy-back-link {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .privacy-back-link:hover {
+  color: #fdba74;
+}
+
+[data-theme='dark'] .privacy-policy-card p,
+[data-theme='dark'] .privacy-policy-card li {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .win-rate-comment {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] .daily-pick-line-label {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .daily-pick-line-value {
+  color: #fdba74;
+}
+
+[data-theme='dark'] .lucky-uniform-card {
+  background: linear-gradient(135deg, #1e293b 0%, #422006 100%);
+  border-color: #78350f;
+}
+
+[data-theme='dark'] .error {
+  color: #fca5a5;
+}
