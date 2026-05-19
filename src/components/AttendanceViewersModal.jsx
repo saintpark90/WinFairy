@@ -53,7 +53,7 @@ function formatModalDate(isoDate) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')} (${weekdays[d.getDay()]})`
 }
 
-function AttendanceViewersModal({ dateText, match, onClose }) {
+function AttendanceViewersModal({ dateText, match, onClose, onAttendanceChanged }) {
   const [viewers, setViewers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -139,6 +139,7 @@ function AttendanceViewersModal({ dateText, match, onClose }) {
       setSearchResults([])
       await loadViewers()
       void refreshLeaderboardCache(supabase)
+      onAttendanceChanged?.()
     }
     setActingUserId(null)
   }

@@ -345,29 +345,34 @@ function RankingsPage({ userId }) {
   useEffect(() => {
     let cancelled = false
 
-    const load = async () => {
+    const load = async ({ background = false } = {}) => {
       if (!supabase) {
         setError('Supabase 환경변수가 비어 있어 순위를 불러올 수 없습니다.')
         setLoading(false)
         return
       }
-      setLoading(true)
-      setError('')
+      if (!background) {
+        setLoading(true)
+        setError('')
+      }
       const { data, error: loadError } = await fetchAttendanceLeaderboard(supabase)
       if (cancelled) return
       if (loadError) {
-        setError(loadError.message)
-        setRows([])
+        if (!background) {
+          setError(loadError.message)
+          setRows([])
+        }
       } else {
         setRows(data ?? [])
+        setError('')
       }
-      setLoading(false)
+      if (!background) setLoading(false)
     }
 
-    load()
+    void load()
 
     const onRefresh = () => {
-      void load()
+      void load({ background: true })
     }
     window.addEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
 

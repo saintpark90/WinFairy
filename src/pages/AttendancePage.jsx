@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { refreshLeaderboardCache } from '../lib/refreshLeaderboard'
 import { formatStadiumShort } from '../lib/stadiumShort'
@@ -94,6 +94,7 @@ function AttendancePage({ userId, user }) {
   const [isAppAdmin, setIsAppAdmin] = useState(false)
   const [contextMenu, setContextMenu] = useState(null)
   const [viewersModalDate, setViewersModalDate] = useState(null)
+  const [attendeeCountByDate, setAttendeeCountByDate] = useState(() => new Map())
   const savingDateRef = useRef(new Set())
   const calendarTouchStartRef = useRef(null)
 
@@ -178,6 +179,44 @@ function AttendancePage({ userId, user }) {
       cancelled = true
     }
   }, [user])
+
+  const loadMonthAttendeeCounts = useCallback(async () => {
+    if (!supabase || !isAppAdmin) {
+      setAttendeeCountByDate(new Map())
+      return
+    }
+
+    const [yearText, monthText] = viewMonth.split('-')
+    const year = Number(yearText)
+    const month = Number(monthText)
+    if (!year || !month) {
+      setAttendeeCountByDate(new Map())
+      return
+    }
+
+    const { data, error } = await supabase.rpc('admin_attendance_counts_by_month', {
+      p_year: year,
+      p_month: month,
+    })
+
+    if (error) {
+      console.warn('[admin_attendance_counts_by_month]', error.message)
+      setAttendeeCountByDate(new Map())
+      return
+    }
+
+    const next = new Map()
+    ;(data ?? []).forEach((row) => {
+      const dateKey =
+        typeof row.attended_at === 'string' ? row.attended_at.slice(0, 10) : row.attended_at
+      next.set(dateKey, Number(row.attendee_count) || 0)
+    })
+    setAttendeeCountByDate(next)
+  }, [isAppAdmin, viewMonth])
+
+  useEffect(() => {
+    void loadMonthAttendeeCounts()
+  }, [loadMonthAttendeeCounts])
 
   const matchesByDate = useMemo(() => {
     const map = new Map()
@@ -461,12 +500,23 @@ function AttendancePage({ userId, user }) {
                             : '',
                       cell.match?.home_away === 'HOME' ? 'calendar-cell--home-game' : '',
                       cell.match && attendedSet.has(cell.dateText) ? 'calendar-cell--attended' : '',
+                      isAppAdmin && (attendeeCountByDate.get(cell.dateText) ?? 0) > 0
+                        ? 'calendar-cell--show-attendee-count'
+                        : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
                     onClick={() => toggleAttendanceForDate(cell.dateText)}
                     onContextMenu={(event) => handleCalendarCellContextMenu(event, cell.dateText)}
                   >
+                    {isAppAdmin && (attendeeCountByDate.get(cell.dateText) ?? 0) > 0 ? (
+                      <span
+                        className="calendar-attendee-count"
+                        aria-label={`직관 ${attendeeCountByDate.get(cell.dateText)}명`}
+                      >
+                        {attendeeCountByDate.get(cell.dateText)}
+                      </span>
+                    ) : null}
                     <div className="calendar-cell-head">
                       <span
                         className={[
@@ -718,6 +768,7 @@ function AttendancePage({ userId, user }) {
           dateText={viewersModalDate}
           match={viewersModalMatch}
           onClose={() => setViewersModalDate(null)}
+          onAttendanceChanged={loadMonthAttendeeCounts}
         />
       ) : null}
     </section>

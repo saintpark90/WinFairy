@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { supabase, supabaseConfigError } from './lib/supabase'
 import { BLOCKED_LOGIN_MESSAGE } from './lib/admin'
-import { refreshLeaderboardCache } from './lib/refreshLeaderboard'
 import { getUserDisplayFields, isAuthUserUuid } from './lib/userDisplay'
 import { resetLoginScroll, useLoginViewportLock } from './lib/useLoginViewportLock'
 import AppTail from './components/AppTail'
@@ -209,6 +208,17 @@ function App() {
     }
   }, [useLocalMockAuth])
 
+  const profileSyncKey = useMemo(() => {
+    if (!session?.user) return ''
+    const { displayName, avatarUrl } = getUserDisplayFields(session.user)
+    return [
+      session.user.id,
+      displayName,
+      avatarUrl ?? '',
+      session.user.email ?? '',
+    ].join('|')
+  }, [session?.user])
+
   useEffect(() => {
     if (!session?.user || useLocalMockAuth || !supabase) return
     if (!isAuthUserUuid(session.user.id)) return
@@ -230,15 +240,13 @@ function App() {
       )
       if (!cancelled && error) {
         console.error('[profiles]', error.message)
-      } else if (!cancelled && !error) {
-        void refreshLeaderboardCache(supabase)
       }
     })()
 
     return () => {
       cancelled = true
     }
-  }, [session, useLocalMockAuth])
+  }, [profileSyncKey, useLocalMockAuth])
 
   useEffect(() => {
     if (!session?.user?.id || useLocalMockAuth || !supabase) {
