@@ -2691,7 +2691,7 @@ button {
 
   .rankings-page .rankings-table th:nth-child(1),
   .rankings-page .rankings-table td:nth-child(1) {
-    width: 7%;
+    width: 10%;
   }
 
   .rankings-page .rankings-table th:nth-child(2),
