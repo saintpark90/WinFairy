@@ -1094,7 +1094,49 @@ def normalize_match(
   return payload
 
 
+_MATCH_CORE_FIELDS = (
+  "game_date",
+  "season",
+  "opponent_team",
+  "stadium",
+  "home_away",
+  "hanwha_score",
+  "opponent_score",
+  "winner_team",
+  "game_status",
+  "game_start_time",
+  "source",
+)
+
+
+def _match_core_payload(row: Dict[str, Any]) -> Dict[str, Any]:
+  return {key: row[key] for key in _MATCH_CORE_FIELDS if key in row}
+
+
+def _post_upsert_batches(
+  endpoint: str,
+  headers: dict[str, str],
+  rows: List[Dict[str, Any]],
+  batch_size: int,
+  label: str,
+) -> None:
+  for i in range(0, len(rows), batch_size):
+    batch = rows[i : i + batch_size]
+    resp = requests.post(endpoint, headers=headers, data=json.dumps(batch), timeout=60)
+    if resp.status_code >= 400:
+      preview = (resp.text or "")[:500]
+      raise RuntimeError(
+        f"Supabase upsert failed ({label}) at batch starting {i} (size={len(batch)}): "
+        f"{resp.status_code} {preview}"
+      )
+
+
 def upsert_matches(supabase_url: str, service_role_key: str, rows: List[Dict[str, Any]]) -> None:
+  """
+  Supabase upsert는 요청 JSON 키 집합이 배치마다 같아야 합니다.
+  키가 섞이면 일부 경기(특히 오늘 경기)의 스코어가 갱신되지 않을 수 있어 2단계로 나눕니다.
+  1) 승패·스코어 등 공통 필드  2) player_stats 가 있는 경기(스코어 포함)
+  """
   endpoint = f"{supabase_url}/rest/v1/matches?on_conflict=game_date"
   headers = {
     "apikey": service_role_key,
@@ -1103,20 +1145,13 @@ def upsert_matches(supabase_url: str, service_role_key: str, rows: List[Dict[str
     "Prefer": "resolution=merge-duplicates",
   }
   batch_size = int(os.getenv("SUPABASE_UPSERT_BATCH_SIZE", "25"))
-  groups: dict[tuple[str, ...], list[Dict[str, Any]]] = {}
-  for row in rows:
-    key = tuple(sorted(row.keys()))
-    groups.setdefault(key, []).append(row)
 
-  for _, grouped_rows in groups.items():
-    for i in range(0, len(grouped_rows), batch_size):
-      batch = grouped_rows[i : i + batch_size]
-      resp = requests.post(endpoint, headers=headers, data=json.dumps(batch), timeout=30)
-      if resp.status_code >= 400:
-        preview = (resp.text or "")[:500]
-        raise RuntimeError(
-          f"Supabase upsert failed at batch starting {i} (size={len(batch)}): {resp.status_code} {preview}"
-        )
+  core_rows = [_match_core_payload(row) for row in rows]
+  _post_upsert_batches(endpoint, headers, core_rows, batch_size, "core")
+
+  detail_rows = [row for row in rows if row.get("player_stats")]
+  if detail_rows:
+    _post_upsert_batches(endpoint, headers, detail_rows, batch_size, "detail")
 
 
 def _load_local_env() -> None:

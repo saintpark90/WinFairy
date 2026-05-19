@@ -2,10 +2,8 @@ name: Sync KBO schedule (Schedule.aspx)
 
 on:
   schedule:
-    # KST 14:00~23:30 — 매 30분 (UTC 05:00~15:30, GitHub Actions는 UTC 기준)
-    - cron: '0,30 5-15 * * *'
-    # KST 익일 01:00 (UTC 16:00)
-    - cron: '0 16 * * *'
+    # 매 30분 (UTC). KST 기준 :30·:00에 9시간 차이 — 종료 직후 스코어 반영용
+    - cron: '0,30 * * * *'
   workflow_dispatch:
 
 jobs:
