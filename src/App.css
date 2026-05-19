@@ -383,6 +383,11 @@ span.profile-avatar-large.user-avatar-fallback {
   font-size: 0.92rem;
 }
 
+.admin-members-table th.admin-members-col-member,
+.admin-members-table td.admin-members-col-member {
+  min-width: 9rem;
+}
+
 .admin-members-table th,
 .admin-members-table td {
   padding: 10px 12px;
@@ -3046,6 +3051,73 @@ button {
 
   .rankings-page .rankings-sort-icon {
     font-size: 0.65em;
+  }
+
+  .admin-members-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+
+  .admin-members-table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .admin-members-table th,
+  .admin-members-table td {
+    white-space: nowrap;
+    padding: 8px 10px;
+  }
+
+  .admin-members-table th.admin-members-col-member,
+  .admin-members-table td.admin-members-col-member {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    min-width: 8.75rem;
+    max-width: 10.5rem;
+    background: #ffffff;
+    box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
+  }
+
+  .admin-members-table thead .admin-members-col-member {
+    z-index: 4;
+  }
+
+  .admin-members-row--super-admin .admin-members-col-member {
+    background: #fffbeb;
+  }
+
+  .admin-members-row--admin .admin-members-col-member {
+    background: #f8fafc;
+  }
+
+  .admin-member-name-cell {
+    max-width: 9.5rem;
+  }
+
+  .admin-member-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-member-email {
+    min-width: 9rem;
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .admin-member-actions {
+    flex-wrap: nowrap;
+  }
+
+  .admin-member-admin-cell {
+    min-width: 5.5rem;
   }
 }
 

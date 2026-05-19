@@ -275,7 +275,9 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
           <table className="admin-members-table">
             <thead>
               <tr>
-                <th scope="col">회원</th>
+                <th scope="col" className="admin-members-col-member">
+                  회원
+                </th>
                 <th scope="col">이메일</th>
                 <th scope="col">직관</th>
                 <th scope="col">상태</th>
@@ -310,7 +312,7 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
 
                   return (
                     <tr key={member.user_id} className={rowClass}>
-                      <td>
+                      <td className="admin-members-col-member">
                         <span className="admin-member-name-cell">
                           <AdminMemberAvatar
                             displayName={member.display_name}
