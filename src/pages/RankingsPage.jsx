@@ -365,12 +365,10 @@ function RankingsPage({ userId }) {
       void load()
     }
     window.addEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
-    window.addEventListener('focus', onRefresh)
 
     return () => {
       cancelled = true
       window.removeEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
-      window.removeEventListener('focus', onRefresh)
     }
   }, [])
 
