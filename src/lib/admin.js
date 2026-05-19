@@ -1,7 +1,7 @@
-/** 앱 관리자(순위 페이지 회원 삭제 등). 서버 RPC에서도 동일 이메일로 검증합니다. */
+/** 관리자로 지정된 계정 이메일 (소문자 비교) */
 export const ADMIN_EMAIL = 'palk876@kakao.com'
 
 export function isAdminUser(user) {
-  const email = user?.email?.trim().toLowerCase()
+  const email = user?.email?.trim().toLowerCase() ?? ''
   return email === ADMIN_EMAIL.toLowerCase()
 }

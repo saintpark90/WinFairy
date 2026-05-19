@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import AdminMembersCard from '../components/AdminMembersCard'
+import { isAdminUser } from '../lib/admin'
 import {
   getUserDisplayFields,
   normalizeAvatarUrl,
@@ -48,6 +50,7 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
       })
   const showAvatar = Boolean(profileAvatarSrc) && !imgFailed
   const email = user?.email ?? ''
+  const isAdmin = isAdminUser(user)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
 
@@ -147,6 +150,8 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
           ) : null}
         </div>
       </section>
+
+      {isAdmin ? <AdminMembersCard currentUserId={user?.id} /> : null}
     </div>
   )
 }

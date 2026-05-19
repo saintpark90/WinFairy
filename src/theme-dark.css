@@ -161,15 +161,7 @@ html[data-theme='dark'] body {
 }
 
 [data-theme='dark'] .rankings-podium-avatar-name {
-  color: #f3f4f6;
-}
-
-[data-theme='dark'] .rankings-name-admin-action {
-  color: #fb923c;
-}
-
-[data-theme='dark'] .rankings-name-admin-action:hover:not(:disabled) {
-  color: #fdba74;
+  color: #f1f5f9;
 }
 
 [data-theme='dark'] .top5-table th,
@@ -421,6 +413,46 @@ html[data-theme='dark'] body {
 }
 
 [data-theme='dark'] .profile-delete-account-button:hover:not(:disabled) {
+  background: #7f1d1d;
+}
+
+[data-theme='dark'] .admin-members-refresh {
+  background: #243044;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+[data-theme='dark'] .admin-members-refresh:hover:not(:disabled) {
+  background: #334155;
+}
+
+[data-theme='dark'] .admin-members-table th,
+[data-theme='dark'] .admin-members-table td {
+  border-bottom-color: #334155;
+}
+
+[data-theme='dark'] .admin-members-table th {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] .admin-member-avatar {
+  border-color: #475569;
+}
+
+[data-theme='dark'] .admin-member-avatar-fallback,
+[data-theme='dark'] .admin-member-badge {
+  background: #431407;
+  color: #fdba74;
+  border-color: #9a3412;
+}
+
+[data-theme='dark'] .admin-member-delete-button {
+  background: #450a0a;
+  color: #fecaca;
+  border-color: #7f1d1d;
+}
+
+[data-theme='dark'] .admin-member-delete-button:hover:not(:disabled) {
   background: #7f1d1d;
 }
 

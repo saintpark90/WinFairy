@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { isAdminUser } from '../lib/admin'
 import { fetchAttendanceLeaderboard } from '../lib/leaderboard'
-import { LEADERBOARD_UPDATED_EVENT, refreshLeaderboardCache } from '../lib/refreshLeaderboard'
+import { LEADERBOARD_UPDATED_EVENT } from '../lib/refreshLeaderboard'
 import { supabase } from '../lib/supabase'
 import { optimizeAvatarUrl, normalizeAvatarUrl } from '../lib/userDisplay'
 
@@ -79,49 +78,7 @@ const formatPodiumStat = (row, sortKey) => {
   }
 }
 
-function RankingsMemberName({
-  displayName,
-  targetUserId,
-  currentUserId,
-  isAdmin,
-  onAdminDelete,
-  deletingUserId,
-  className = 'rankings-name',
-}) {
-  const name = displayName || '회원'
-  const canDelete =
-    isAdmin &&
-    targetUserId &&
-    currentUserId &&
-    targetUserId !== currentUserId
-  const isDeleting = deletingUserId === targetUserId
-
-  if (!canDelete) {
-    return <span className={className}>{name}</span>
-  }
-
-  return (
-    <button
-      type="button"
-      className={`${className} rankings-name-admin-action`}
-      disabled={Boolean(deletingUserId)}
-      title="회원 삭제"
-      onClick={() => onAdminDelete({ user_id: targetUserId, display_name: name })}
-    >
-      {isDeleting ? '삭제 중…' : name}
-    </button>
-  )
-}
-
-function RankingsUserCell({
-  displayName,
-  avatarUrl,
-  targetUserId,
-  currentUserId,
-  isAdmin,
-  onAdminDelete,
-  deletingUserId,
-}) {
+function RankingsUserCell({ displayName, avatarUrl }) {
   const [imgStage, setImgStage] = useState(0)
   const name = displayName || '회원'
   const initial = name.slice(0, 1)
@@ -178,28 +135,12 @@ function RankingsUserCell({
           {initial}
         </span>
       )}
-      <RankingsMemberName
-        displayName={name}
-        targetUserId={targetUserId}
-        currentUserId={currentUserId}
-        isAdmin={isAdmin}
-        onAdminDelete={onAdminDelete}
-        deletingUserId={deletingUserId}
-      />
+      <span className="rankings-name">{name}</span>
     </span>
   )
 }
 
-function RankingsPodiumAvatar({
-  displayName,
-  avatarUrl,
-  modifier,
-  targetUserId,
-  currentUserId,
-  isAdmin,
-  onAdminDelete,
-  deletingUserId,
-}) {
+function RankingsPodiumAvatar({ displayName, avatarUrl, modifier }) {
   const [imgStage, setImgStage] = useState(0)
   const name = displayName || '회원'
   const initial = name.slice(0, 1)
@@ -256,30 +197,12 @@ function RankingsPodiumAvatar({
           {initial}
         </span>
       )}
-      <RankingsMemberName
-        displayName={name}
-        targetUserId={targetUserId}
-        currentUserId={currentUserId}
-        isAdmin={isAdmin}
-        onAdminDelete={onAdminDelete}
-        deletingUserId={deletingUserId}
-        className="rankings-podium-avatar-name"
-      />
+      <span className="rankings-podium-avatar-name">{name}</span>
     </div>
   )
 }
 
-function RankingsPodiumSlot({
-  place,
-  medal,
-  modifier,
-  row,
-  userId,
-  sortKey,
-  isAdmin,
-  onAdminDelete,
-  deletingUserId,
-}) {
+function RankingsPodiumSlot({ place, medal, modifier, row, userId, sortKey }) {
   const isMe = Boolean(userId && row?.user_id === userId)
 
   return (
@@ -302,11 +225,6 @@ function RankingsPodiumSlot({
             displayName={row.display_name}
             avatarUrl={row.avatar_url}
             modifier={modifier}
-            targetUserId={row.user_id}
-            currentUserId={userId}
-            isAdmin={isAdmin}
-            onAdminDelete={onAdminDelete}
-            deletingUserId={deletingUserId}
           />
           <p className="rankings-podium-stats">
             <span>{formatPodiumStat(row, sortKey)}</span>
@@ -327,14 +245,7 @@ function RankingsPodiumSlot({
   )
 }
 
-function RankingsPodium({
-  topThree,
-  userId,
-  sortKey,
-  isAdmin,
-  onAdminDelete,
-  deletingUserId,
-}) {
+function RankingsPodium({ topThree, userId, sortKey }) {
   return (
     <div className="rankings-podium" aria-label="1위부터 3위까지 시상대">
       {PODIUM_LAYOUT.map(({ place, medal, modifier }) => (
@@ -346,9 +257,6 @@ function RankingsPodium({
           row={topThree[place - 1] ?? null}
           userId={userId}
           sortKey={sortKey}
-          isAdmin={isAdmin}
-          onAdminDelete={onAdminDelete}
-          deletingUserId={deletingUserId}
         />
       ))}
     </div>
@@ -381,27 +289,13 @@ function RankingsSortBar({ sortKey, sortDir, onSort }) {
   )
 }
 
-function RankingsTableRow({
-  row,
-  userId,
-  isAdmin,
-  onAdminDelete,
-  deletingUserId,
-}) {
+function RankingsTableRow({ row, userId }) {
   const isMe = Boolean(userId && row.user_id === userId)
   return (
     <tr className={isMe ? 'rankings-row-me' : undefined}>
       <td>{row.rank}</td>
       <td>
-        <RankingsUserCell
-          displayName={row.display_name}
-          avatarUrl={row.avatar_url}
-          targetUserId={row.user_id}
-          currentUserId={userId}
-          isAdmin={isAdmin}
-          onAdminDelete={onAdminDelete}
-          deletingUserId={deletingUserId}
-        />
+        <RankingsUserCell displayName={row.display_name} avatarUrl={row.avatar_url} />
       </td>
       <td>{row.games}</td>
       <td>{row.wins}</td>
@@ -436,45 +330,39 @@ function SortableHeader({ column, sortKey, sortDir, onSort }) {
   )
 }
 
-function RankingsPage({ user }) {
-  const userId = user?.id ?? null
-  const isAdmin = isAdminUser(user)
+function RankingsPage({ userId }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [adminError, setAdminError] = useState('')
-  const [deletingUserId, setDeletingUserId] = useState(null)
   const [sortKey, setSortKey] = useState('wins')
   const [sortDir, setSortDir] = useState('desc')
 
-  const loadLeaderboard = useCallback(async () => {
-    if (!supabase) {
-      setError('Supabase 환경변수가 비어 있어 순위를 불러올 수 없습니다.')
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    setError('')
-    const { data, error: loadError } = await fetchAttendanceLeaderboard(supabase)
-    if (loadError) {
-      setError(loadError.message)
-      setRows([])
-    } else {
-      setRows(data ?? [])
-    }
-    setLoading(false)
-  }, [])
   useEffect(() => {
     let cancelled = false
 
     const load = async () => {
-      await loadLeaderboard()
+      if (!supabase) {
+        setError('Supabase 환경변수가 비어 있어 순위를 불러올 수 없습니다.')
+        setLoading(false)
+        return
+      }
+      setLoading(true)
+      setError('')
+      const { data, error: loadError } = await fetchAttendanceLeaderboard(supabase)
+      if (cancelled) return
+      if (loadError) {
+        setError(loadError.message)
+        setRows([])
+      } else {
+        setRows(data ?? [])
+      }
+      setLoading(false)
     }
 
-    void load()
+    load()
 
     const onRefresh = () => {
-      if (!cancelled) void loadLeaderboard()
+      void load()
     }
     window.addEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
     window.addEventListener('focus', onRefresh)
@@ -484,40 +372,7 @@ function RankingsPage({ user }) {
       window.removeEventListener(LEADERBOARD_UPDATED_EVENT, onRefresh)
       window.removeEventListener('focus', onRefresh)
     }
-  }, [loadLeaderboard])
-
-  const handleAdminDelete = useCallback(
-    async (row) => {
-      if (!isAdmin || !supabase || !row?.user_id) return
-
-      const name = row.display_name || '회원'
-      const firstOk = window.confirm(
-        `「${name}」 회원을 삭제하시겠습니까?\n\n직관 기록·프로필 등 모든 데이터가 영구 삭제되며 복구할 수 없습니다.`,
-      )
-      if (!firstOk) return
-
-      const secondOk = window.confirm(
-        `정말 「${name}」 회원을 삭제할까요?\n\n마지막 확인입니다. 되돌릴 수 없습니다.`,
-      )
-      if (!secondOk) return
-
-      setAdminError('')
-      setDeletingUserId(row.user_id)
-      const { error: deleteError } = await supabase.rpc('admin_delete_member', {
-        target_user_id: row.user_id,
-      })
-      setDeletingUserId(null)
-
-      if (deleteError) {
-        setAdminError(deleteError.message)
-        return
-      }
-
-      setRows((prev) => prev.filter((item) => item.user_id !== row.user_id))
-      void refreshLeaderboardCache(supabase)
-    },
-    [isAdmin],
-  )
+  }, [])
 
   const handleSort = useCallback((key) => {
     if (key === sortKey) {
@@ -570,16 +425,6 @@ function RankingsPage({ user }) {
 
         {loading ? <p>순위를 불러오는 중...</p> : null}
         {error ? <p className="error">{error}</p> : null}
-        {adminError ? (
-          <p className="error" role="alert">
-            {adminError}
-          </p>
-        ) : null}
-        {isAdmin ? (
-          <p className="rankings-admin-hint muted" role="status">
-            관리자: 닉네임을 누르면 해당 회원을 삭제할 수 있습니다.
-          </p>
-        ) : null}
 
         {!loading && !error && !rankedRows.length ? (
           <p className="muted">아직 직관 데이터가 있는 회원이 없습니다.</p>
@@ -596,14 +441,7 @@ function RankingsPage({ user }) {
             ) : null}
 
             {showPodium ? (
-              <RankingsPodium
-                topThree={podiumRows}
-                userId={userId}
-                sortKey={sortKey}
-                isAdmin={isAdmin}
-                onAdminDelete={handleAdminDelete}
-                deletingUserId={deletingUserId}
-              />
+              <RankingsPodium topThree={podiumRows} userId={userId} sortKey={sortKey} />
             ) : null}
 
             {rankedRows.length ? (
@@ -626,14 +464,7 @@ function RankingsPage({ user }) {
                   </thead>
                   <tbody>
                     {rankedRows.map((row) => (
-                      <RankingsTableRow
-                        key={row.user_id}
-                        row={row}
-                        userId={userId}
-                        isAdmin={isAdmin}
-                        onAdminDelete={handleAdminDelete}
-                        deletingUserId={deletingUserId}
-                      />
+                      <RankingsTableRow key={row.user_id} row={row} userId={userId} />
                     ))}
                   </tbody>
                 </table>
