@@ -242,11 +242,6 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
       <div className="admin-members-header">
         <div>
           <h2>회원 관리</h2>
-          <p className="muted admin-members-desc">
-            {isSuperAdmin
-              ? '슈퍼관리자 · 관리자 지정·차단·삭제 가능'
-              : '관리자 · 차단·삭제 가능 (관리자 지정은 슈퍼관리자만)'}
-          </p>
         </div>
         <button
           type="button"
