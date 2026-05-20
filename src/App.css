@@ -493,6 +493,32 @@ span.profile-avatar-large.user-avatar-fallback {
   word-break: break-all;
 }
 
+.admin-members-col-alias {
+  min-width: 6.5rem;
+  max-width: 10rem;
+}
+
+.admin-member-alias-input {
+  width: 100%;
+  max-width: 10rem;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.admin-member-alias-input:focus {
+  outline: none;
+  border-color: #fdba74;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.25);
+}
+
+.admin-member-alias-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .admin-member-count {
   white-space: nowrap;
 }
@@ -2729,6 +2755,15 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rankings-name--has-alias {
+  cursor: help;
+  border-bottom: 1px dotted rgba(234, 88, 12, 0.45);
+}
+
+.rankings-podium-avatar-name.rankings-name--has-alias {
+  border-bottom-color: rgba(234, 88, 12, 0.45);
 }
 
 .rankings-row-me {

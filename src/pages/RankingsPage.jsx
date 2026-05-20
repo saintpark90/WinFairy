@@ -21,6 +21,10 @@ const SORTABLE_COLUMNS = [
   { key: 'win_rate', label: '승률' },
 ]
 
+/** 순위 표시명(별명 우선) — 정렬·동률 비교에 사용 */
+const rankNameLabel = (row) =>
+  (String(row?.display_alias ?? '').trim() || String(row?.display_name ?? ''))
+
 /** 동률 시 2·3차 정렬 (방향: asc | desc) */
 const SORT_TIE_BREAKERS = {
   games: [
@@ -63,7 +67,7 @@ const compareRankedRows = (a, b, sortKey, sortDir) => {
     if (result !== 0) return result
   }
 
-  return String(a.display_name).localeCompare(String(b.display_name), 'ko')
+  return String(rankNameLabel(a)).localeCompare(String(rankNameLabel(b)), 'ko')
 }
 
 const formatPodiumStat = (row, sortKey) => {
@@ -83,10 +87,13 @@ const formatPodiumStat = (row, sortKey) => {
   }
 }
 
-function RankingsUserCell({ displayName, avatarUrl }) {
+function RankingsUserCell({ displayName, displayAlias, avatarUrl }) {
   const [imgStage, setImgStage] = useState(0)
-  const name = displayName || '회원'
-  const initial = name.slice(0, 1)
+  const trimmedAlias = String(displayAlias ?? '').trim()
+  const nickname = displayName || '회원'
+  const label = trimmedAlias || nickname
+  const initial = label.slice(0, 1)
+  const showNicknameTooltip = Boolean(trimmedAlias)
 
   const avatarCandidates = useMemo(() => {
     const secured = normalizeAvatarUrl(avatarUrl)
@@ -140,15 +147,23 @@ function RankingsUserCell({ displayName, avatarUrl }) {
           {initial}
         </span>
       )}
-      <span className="rankings-name">{name}</span>
+      <span
+        className={`rankings-name${showNicknameTooltip ? ' rankings-name--has-alias' : ''}`}
+        title={showNicknameTooltip ? `닉네임: ${nickname}` : undefined}
+      >
+        {label}
+      </span>
     </span>
   )
 }
 
-function RankingsPodiumAvatar({ displayName, avatarUrl, modifier }) {
+function RankingsPodiumAvatar({ displayName, displayAlias, avatarUrl, modifier }) {
   const [imgStage, setImgStage] = useState(0)
-  const name = displayName || '회원'
-  const initial = name.slice(0, 1)
+  const trimmedAlias = String(displayAlias ?? '').trim()
+  const nickname = displayName || '회원'
+  const label = trimmedAlias || nickname
+  const initial = label.slice(0, 1)
+  const showNicknameTooltip = Boolean(trimmedAlias)
   const avatarPx = modifier === 'gold' ? PODIUM_AVATAR_PX.gold : PODIUM_AVATAR_PX.silver
 
   const avatarCandidates = useMemo(() => {
@@ -202,7 +217,12 @@ function RankingsPodiumAvatar({ displayName, avatarUrl, modifier }) {
           {initial}
         </span>
       )}
-      <span className="rankings-podium-avatar-name">{name}</span>
+      <span
+        className={`rankings-podium-avatar-name${showNicknameTooltip ? ' rankings-name--has-alias' : ''}`}
+        title={showNicknameTooltip ? `닉네임: ${nickname}` : undefined}
+      >
+        {label}
+      </span>
     </div>
   )
 }
@@ -228,6 +248,7 @@ function RankingsPodiumSlot({ place, medal, modifier, row, userId, sortKey }) {
         <>
           <RankingsPodiumAvatar
             displayName={row.display_name}
+            displayAlias={row.display_alias}
             avatarUrl={row.avatar_url}
             modifier={modifier}
           />
@@ -300,7 +321,11 @@ function RankingsTableRow({ row, userId }) {
     <tr className={isMe ? 'rankings-row-me' : undefined}>
       <td>{row.rank}</td>
       <td>
-        <RankingsUserCell displayName={row.display_name} avatarUrl={row.avatar_url} />
+        <RankingsUserCell
+          displayName={row.display_name}
+          displayAlias={row.display_alias}
+          avatarUrl={row.avatar_url}
+        />
       </td>
       <td>{row.games}</td>
       <td>{row.wins}</td>

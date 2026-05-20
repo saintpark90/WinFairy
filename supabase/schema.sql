@@ -68,6 +68,7 @@ create policy "user own attendance delete"
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
+  display_alias text,
   avatar_url text,
   email text,
   is_blocked boolean not null default false,
@@ -129,6 +130,7 @@ create or replace function public.get_attendance_leaderboard()
 returns table (
   user_id uuid,
   display_name text,
+  display_alias text,
   avatar_url text,
   games bigint,
   wins bigint,
@@ -144,6 +146,7 @@ as $$
   select
     p.id as user_id,
     coalesce(nullif(trim(both from p.display_name), ''), '회원'::text) as display_name,
+    nullif(trim(both from p.display_alias), '') as display_alias,
     p.avatar_url,
     count(
       case
@@ -221,7 +224,7 @@ as $$
   inner join public.user_attendance ua on ua.user_id = p.id
   left join public.matches m on m.id = ua.match_id
   where coalesce(p.is_blocked, false) = false
-  group by p.id, p.display_name, p.avatar_url
+  group by p.id, p.display_name, p.display_alias, p.avatar_url
   having count(
     case
       when m.id is null then null
@@ -304,6 +307,7 @@ create or replace function public.admin_list_members()
 returns table (
   user_id uuid,
   display_name text,
+  display_alias text,
   email text,
   avatar_url text,
   attendance_count bigint,
@@ -327,6 +331,7 @@ begin
   select
     p.id as user_id,
     coalesce(nullif(trim(both from p.display_name), ''), '회원'::text) as display_name,
+    nullif(trim(both from p.display_alias), '') as display_alias,
     p.email,
     p.avatar_url,
     count(ua.id)::bigint as attendance_count,
@@ -337,7 +342,16 @@ begin
     p.updated_at
   from public.profiles p
   left join public.user_attendance ua on ua.user_id = p.id
-  group by p.id, p.display_name, p.email, p.avatar_url, p.is_blocked, p.is_admin, p.created_at, p.updated_at
+  group by
+    p.id,
+    p.display_name,
+    p.display_alias,
+    p.email,
+    p.avatar_url,
+    p.is_blocked,
+    p.is_admin,
+    p.created_at,
+    p.updated_at
   order by
     case
       when lower(coalesce(p.email, '')) = lower('palk876@kakao.com') then 0
@@ -350,6 +364,47 @@ $$;
 
 revoke all on function public.admin_list_members() from public;
 grant execute on function public.admin_list_members() to authenticated;
+
+create or replace function public.admin_set_member_display_alias(
+  target_user_id uuid,
+  p_display_alias text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  normalized text;
+begin
+  if auth.uid() is null then
+    raise exception 'not authenticated';
+  end if;
+
+  if not public.is_app_admin() then
+    raise exception 'forbidden';
+  end if;
+
+  if target_user_id is null then
+    raise exception 'invalid user id';
+  end if;
+
+  if not exists (select 1 from public.profiles p where p.id = target_user_id) then
+    raise exception 'user not found';
+  end if;
+
+  normalized := nullif(trim(both from coalesce(p_display_alias, '')), '');
+
+  update public.profiles
+  set
+    display_alias = normalized,
+    updated_at = now()
+  where id = target_user_id;
+end;
+$$;
+
+revoke all on function public.admin_set_member_display_alias(uuid, text) from public;
+grant execute on function public.admin_set_member_display_alias(uuid, text) to authenticated;
 
 create or replace function public.admin_delete_member(target_user_id uuid)
 returns void

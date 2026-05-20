@@ -161,6 +161,34 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
     updateMemberAdmin(member.user_id, nextChecked)
   }
 
+  const handleDisplayAliasSave = async (member, rawValue) => {
+    const trimmed = String(rawValue ?? '').trim()
+    const next = trimmed || null
+    const prev = member.display_alias ?? null
+    if (next === prev) return
+    if (!supabase) return
+
+    setActingId(member.user_id)
+    setActionError('')
+    const { error: aliasError } = await supabase.rpc('admin_set_member_display_alias', {
+      target_user_id: member.user_id,
+      p_display_alias: trimmed,
+    })
+    setActingId(null)
+
+    if (aliasError) {
+      setActionError(aliasError.message)
+      return
+    }
+
+    setMembers((prev) =>
+      prev.map((row) =>
+        row.user_id === member.user_id ? { ...row, display_alias: next } : row,
+      ),
+    )
+    void refreshLeaderboardCache(supabase)
+  }
+
   const handleDeleteMember = async (member) => {
     const label = member.display_name || '회원'
     const email = member.email ? `\n(${member.email})` : ''
@@ -236,7 +264,7 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
     void refreshLeaderboardCache(supabase)
   }
 
-  const tableColSpan = isSuperAdmin ? 7 : 6
+  const tableColSpan = isSuperAdmin ? 8 : 7
 
   return (
     <section className="card admin-members-card">
@@ -273,6 +301,9 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
               <tr>
                 <th scope="col" className="admin-members-col-member">
                   회원
+                </th>
+                <th scope="col" className="admin-members-col-alias">
+                  별명
                 </th>
                 <th scope="col">이메일</th>
                 <th scope="col">직관</th>
@@ -324,6 +355,19 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
                             </span>
                           ) : null}
                         </span>
+                      </td>
+                      <td className="admin-members-col-alias">
+                        <input
+                          type="text"
+                          className="admin-member-alias-input"
+                          maxLength={40}
+                          placeholder="순위 표시용"
+                          aria-label={`${member.display_name} 별명`}
+                          defaultValue={member.display_alias ?? ''}
+                          key={`${member.user_id}-${member.display_alias ?? ''}`}
+                          disabled={Boolean(actingId)}
+                          onBlur={(e) => void handleDisplayAliasSave(member, e.target.value)}
+                        />
                       </td>
                       <td className="admin-member-email">{member.email || '—'}</td>
                       <td className="admin-member-count">{member.attendance_count ?? 0}경기</td>

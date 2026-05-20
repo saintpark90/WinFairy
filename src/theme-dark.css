@@ -164,6 +164,21 @@ html[data-theme='dark'] body {
   color: #f1f5f9;
 }
 
+[data-theme='dark'] .rankings-name--has-alias {
+  border-bottom-color: rgba(251, 191, 36, 0.45);
+}
+
+[data-theme='dark'] .admin-member-alias-input {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .admin-member-alias-input:focus {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.2);
+}
+
 [data-theme='dark'] .top5-table th,
 [data-theme='dark'] .top5-table td,
 [data-theme='dark'] .rankings-table th,

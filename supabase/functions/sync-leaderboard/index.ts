@@ -23,6 +23,7 @@ type AttendanceRow = {
 type ProfileRow = {
   id: string;
   display_name?: string | null;
+  display_alias?: string | null;
   avatar_url?: string | null;
   is_blocked?: boolean | null;
 };
@@ -30,6 +31,7 @@ type ProfileRow = {
 type LeaderboardRow = {
   user_id: string;
   display_name: string;
+  display_alias: string | null;
   avatar_url: string | null;
   games: number;
   wins: number;
@@ -154,6 +156,8 @@ function buildLeaderboardRows(
     const profile = profileById.get(userId);
     if (profile?.is_blocked) continue;
     const displayName = (profile?.display_name ?? "").trim() || "회원";
+    const displayAliasRaw = (profile?.display_alias ?? "").trim();
+    const displayAlias = displayAliasRaw ? displayAliasRaw : null;
     const winRate =
       stats.winRateDenominator > 0
         ? Math.round((1000 * stats.wins) / stats.winRateDenominator) / 10
@@ -162,6 +166,7 @@ function buildLeaderboardRows(
     rows.push({
       user_id: userId,
       display_name: displayName,
+      display_alias: displayAlias,
       avatar_url: profile?.avatar_url ?? null,
       games: stats.games,
       wins: stats.wins,
@@ -171,12 +176,15 @@ function buildLeaderboardRows(
     });
   }
 
-  rows.sort(
-    (a, b) =>
+  rows.sort((a, b) => {
+    const label = (row: LeaderboardRow) =>
+      (row.display_alias ?? "").trim() || row.display_name;
+    return (
       b.wins - a.wins ||
       b.games - a.games ||
-      a.display_name.localeCompare(b.display_name, "ko"),
-  );
+      label(a).localeCompare(label(b), "ko")
+    );
+  });
 
   return rows;
 }
@@ -209,7 +217,11 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
     const [profiles, attendance] = await Promise.all([
-      fetchAll<ProfileRow>(admin, "profiles", "id,display_name,avatar_url,is_blocked"),
+      fetchAll<ProfileRow>(
+        admin,
+        "profiles",
+        "id,display_name,display_alias,avatar_url,is_blocked",
+      ),
       fetchAll<AttendanceRow>(
         admin,
         "user_attendance",

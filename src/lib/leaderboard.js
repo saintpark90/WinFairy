@@ -79,6 +79,7 @@ export async function fetchAttendanceLeaderboard(supabase) {
           ...existing,
           avatar_url: row.avatar_url ?? existing.avatar_url,
           display_name: row.display_name ?? existing.display_name,
+          display_alias: row.display_alias ?? existing.display_alias ?? null,
         }),
       )
     } else {
@@ -86,12 +87,15 @@ export async function fetchAttendanceLeaderboard(supabase) {
     }
   }
 
-  const data = [...byUserId.values()].sort(
-    (a, b) =>
+  const data = [...byUserId.values()].sort((a, b) => {
+    const label = (row) =>
+      (String(row.display_alias ?? '').trim() || String(row.display_name ?? ''))
+    return (
       b.wins - a.wins ||
       b.games - a.games ||
-      String(a.display_name).localeCompare(String(b.display_name), 'ko'),
-  )
+      label(a).localeCompare(label(b), 'ko')
+    )
+  })
 
   const source =
     storageRows.length && rpcRows?.length
