@@ -398,17 +398,15 @@ span.profile-avatar-large.user-avatar-fallback {
 .admin-members-table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .admin-members-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.92rem;
-}
-
-.admin-members-table th.admin-members-col-member,
-.admin-members-table td.admin-members-col-member {
-  min-width: 9rem;
 }
 
 .admin-members-table th,
@@ -417,13 +415,48 @@ span.profile-avatar-large.user-avatar-fallback {
   border-bottom: 1px solid #e5e7eb;
   text-align: left;
   vertical-align: middle;
+  white-space: nowrap;
+}
+
+.admin-members-table th.admin-members-col-member,
+.admin-members-table td.admin-members-col-member {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 10rem;
+  max-width: 14rem;
+  background: #ffffff;
+  box-shadow: 2px 0 6px rgba(15, 23, 42, 0.08);
+}
+
+.admin-members-table thead th.admin-members-col-member {
+  z-index: 4;
+  background: #ffffff;
+}
+
+.admin-members-table tbody td.admin-members-col-member {
+  background: #ffffff;
+}
+
+.admin-members-row--super-admin td.admin-members-col-member {
+  background: #fffbeb;
+}
+
+.admin-members-row--admin td.admin-members-col-member {
+  background: #f8fafc;
+}
+
+.admin-members-table td.admin-member-email {
+  word-break: normal;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-members-table th {
   font-size: 0.82rem;
   font-weight: 700;
   color: #6b7280;
-  white-space: nowrap;
 }
 
 .admin-member-name-cell {
@@ -476,6 +509,16 @@ span.profile-avatar-large.user-avatar-fallback {
 .admin-member-name {
   font-weight: 600;
   min-width: 0;
+}
+
+.admin-members-table td.admin-members-col-member .admin-member-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-members-table td.admin-members-col-member .admin-member-name-cell {
+  max-width: 100%;
 }
 
 .admin-member-badge {
@@ -3411,56 +3454,19 @@ button {
     font-size: 0.65em;
   }
 
-  .admin-members-table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-  }
-
-  .admin-members-table {
-    width: max-content;
-    min-width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-
   .admin-members-table th,
   .admin-members-table td {
-    white-space: nowrap;
     padding: 8px 10px;
   }
 
   .admin-members-table th.admin-members-col-member,
   .admin-members-table td.admin-members-col-member {
-    position: sticky;
-    left: 0;
-    z-index: 2;
     min-width: 8.75rem;
     max-width: 10.5rem;
-    background: #ffffff;
-    box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
-  }
-
-  .admin-members-table thead .admin-members-col-member {
-    z-index: 4;
-  }
-
-  .admin-members-row--super-admin .admin-members-col-member {
-    background: #fffbeb;
-  }
-
-  .admin-members-row--admin .admin-members-col-member {
-    background: #f8fafc;
   }
 
   .admin-member-name-cell {
     max-width: 9.5rem;
-  }
-
-  .admin-member-name {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .admin-member-email {

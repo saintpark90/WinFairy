@@ -526,20 +526,26 @@ html[data-theme='dark'] body {
   border-color: #92400e;
 }
 
-@media (max-width: 768px) {
-  [data-theme='dark'] .admin-members-table th.admin-members-col-member,
-  [data-theme='dark'] .admin-members-table td.admin-members-col-member {
-    background: #1a2332;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.28);
-  }
+[data-theme='dark'] .admin-members-table th.admin-members-col-member,
+[data-theme='dark'] .admin-members-table td.admin-members-col-member {
+  background: #1a2332;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.28);
+}
 
-  [data-theme='dark'] .admin-members-row--super-admin .admin-members-col-member {
-    background: #451a03;
-  }
+[data-theme='dark'] .admin-members-table thead th.admin-members-col-member {
+  background: #1a2332;
+}
 
-  [data-theme='dark'] .admin-members-row--admin .admin-members-col-member {
-    background: #1e293b;
-  }
+[data-theme='dark'] .admin-members-table tbody td.admin-members-col-member {
+  background: #1a2332;
+}
+
+[data-theme='dark'] .admin-members-row--super-admin td.admin-members-col-member {
+  background: #451a03;
+}
+
+[data-theme='dark'] .admin-members-row--admin td.admin-members-col-member {
+  background: #1e293b;
 }
 
 [data-theme='dark'] .rankings-user-avatar-wrap,
