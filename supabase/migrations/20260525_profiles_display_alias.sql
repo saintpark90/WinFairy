@@ -4,6 +4,10 @@ alter table public.profiles
 
 comment on column public.profiles.display_alias is '순위 표시용 별명. 비어 있으면 display_name 표시.';
 
+-- RETURNS TABLE 컬럼이 바뀌면 CREATE OR REPLACE만으로는 갱신되지 않음 (42P13)
+drop function if exists public.get_attendance_leaderboard();
+drop function if exists public.admin_list_members();
+
 -- 리더보드 RPC: 닉네임 + 별명
 create or replace function public.get_attendance_leaderboard()
 returns table (
