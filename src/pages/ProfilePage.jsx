@@ -7,6 +7,7 @@ import {
   optimizeAvatarUrl,
   resolveAvatarUrl,
 } from '../lib/userDisplay'
+import { refreshLeaderboardCache } from '../lib/refreshLeaderboard'
 import { supabase } from '../lib/supabase'
 
 const PROFILE_AVATAR_PX = 88
@@ -14,6 +15,9 @@ const PROFILE_AVATAR_PX = 88
 function ProfilePage({ user, onSignOut, onAccountDeleted }) {
   const { displayName: sessionDisplayName } = getUserDisplayFields(user)
   const [profileRow, setProfileRow] = useState(null)
+  const [aliasInput, setAliasInput] = useState('')
+  const [aliasSaving, setAliasSaving] = useState(false)
+  const [aliasMessage, setAliasMessage] = useState('')
   const [imgFailed, setImgFailed] = useState(false)
   const [useRawAvatar, setUseRawAvatar] = useState(false)
 
@@ -28,11 +32,18 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
     ;(async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('display_name, avatar_url, is_admin')
+        .select('display_name, avatar_url, is_admin, display_alias')
         .eq('id', user.id)
         .maybeSingle()
-      if (!cancelled && !error && data) {
+      if (cancelled) return
+      if (error) {
+        setAliasMessage(error.message)
+        return
+      }
+      if (data) {
         setProfileRow(data)
+        setAliasInput(data.display_alias ?? '')
+        setAliasMessage('')
       }
     })()
     return () => {
@@ -54,6 +65,40 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
   const isAdmin = canAccessMemberAdmin(user, profileRow)
   const [deleting, setDeleting] = useState(false)
   const [deleteError, setDeleteError] = useState('')
+
+  const handleSaveDisplayAlias = async () => {
+    if (!supabase || !user?.id) {
+      window.alert('데이터베이스에 연결되어 있지 않아 저장할 수 없습니다.')
+      return
+    }
+    const trimmed = aliasInput.trim()
+    const nextDb = trimmed === '' ? null : trimmed
+    const prevRaw = profileRow?.display_alias
+    const prevDb =
+      typeof prevRaw === 'string' && prevRaw.trim() !== '' ? prevRaw.trim() : null
+    if (nextDb === prevDb) {
+      setAliasMessage('')
+      return
+    }
+
+    setAliasSaving(true)
+    setAliasMessage('')
+    const { error } = await supabase
+      .from('profiles')
+      .update({ display_alias: nextDb })
+      .eq('id', user.id)
+    setAliasSaving(false)
+
+    if (error) {
+      setAliasMessage(error.message)
+      return
+    }
+
+    setProfileRow((prev) => (prev ? { ...prev, display_alias: nextDb } : prev))
+    setAliasInput(nextDb ?? '')
+    setAliasMessage('저장했습니다.')
+    void refreshLeaderboardCache(supabase)
+  }
 
   const handleDeleteAccount = async () => {
     const firstOk = window.confirm(
@@ -124,6 +169,52 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
               </p>
             ) : null}
           </div>
+        </div>
+
+        <div className="profile-alias-section">
+          <label className="profile-alias-label" htmlFor="profile-display-alias">
+            순위용 별명
+          </label>
+          <p className="muted profile-alias-hint">
+            비워 두면 순위에는 카카오 닉네임(표시 이름)이 그대로 나갑니다. 입력하면 순위에는 별명이
+            보이고, 마우스를 올리면 닉네임을 확인할 수 있습니다.
+          </p>
+          <div className="profile-alias-row">
+            <input
+              id="profile-display-alias"
+              type="text"
+              className="profile-alias-input"
+              maxLength={40}
+              value={aliasInput}
+              disabled={aliasSaving || !profileRow}
+              onChange={(e) => {
+                setAliasInput(e.target.value)
+                setAliasMessage('')
+              }}
+              placeholder={displayName}
+              autoComplete="nickname"
+            />
+            <button
+              type="button"
+              className="profile-alias-save-button"
+              disabled={aliasSaving || !profileRow}
+              onClick={() => void handleSaveDisplayAlias()}
+            >
+              {aliasSaving ? '저장 중…' : '저장'}
+            </button>
+          </div>
+          {aliasMessage ? (
+            <p
+              className={
+                aliasMessage === '저장했습니다.'
+                  ? 'profile-alias-feedback profile-alias-feedback--ok'
+                  : 'error profile-alias-feedback'
+              }
+              role={aliasMessage === '저장했습니다.' ? 'status' : 'alert'}
+            >
+              {aliasMessage}
+            </p>
+          ) : null}
         </div>
 
         <div className="profile-logout-section">

@@ -65,6 +65,29 @@ html[data-theme='dark'] body {
   color: #cbd5e1;
 }
 
+[data-theme='dark'] .profile-alias-section {
+  border-top-color: #334155;
+}
+
+[data-theme='dark'] .profile-alias-label {
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .profile-alias-input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+[data-theme='dark'] .profile-alias-input:focus {
+  border-color: #fb923c;
+  box-shadow: 0 0 0 2px rgba(251, 146, 60, 0.15);
+}
+
+[data-theme='dark'] .profile-alias-feedback--ok {
+  color: #86efac;
+}
+
 [data-theme='dark'] .user-avatar-fallback {
   background: #422006;
   color: #fdba74;
