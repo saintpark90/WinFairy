@@ -176,8 +176,7 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
             별명
           </label>
           <p className="muted profile-alias-hint" style={{ marginBottom: '0.5rem' }}>
-            순위에는 카카오(프로필) 닉네임만 표시됩니다. 별명을 저장한 경우에만 이름에 마우스를 올렸을 때
-            말풍선으로 별명이 보입니다. 별명은 관리자 회원 목록 등에서도 참고용으로 쓰입니다.
+            입력하면 순위에서 닉네임 클릭했을때 별명보임
           </p>
           <div className="profile-alias-row">
             <input
