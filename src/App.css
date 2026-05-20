@@ -876,6 +876,30 @@ span.profile-avatar-large.user-avatar-fallback {
   font-size: 0.88rem;
 }
 
+.attendance-admin-calendar-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.attendance-admin-calendar-option input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  accent-color: #ff7d2c;
+  cursor: pointer;
+}
+
 .nav-link {
   text-decoration: none;
   color: #374151;

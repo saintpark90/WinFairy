@@ -11,6 +11,18 @@ import CalendarContextMenu from '../components/CalendarContextMenu'
 
 const DAY_LABELS_MON = ['월', '화', '수', '목', '금', '토', '일']
 const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토']
+const SHOW_ATTENDEE_COUNTS_STORAGE_KEY = 'winfairy-show-attendee-counts'
+
+const readShowAttendeeCountsPreference = () => {
+  try {
+    const stored = window.localStorage.getItem(SHOW_ATTENDEE_COUNTS_STORAGE_KEY)
+    if (stored === '0' || stored === 'false') return false
+    if (stored === '1' || stored === 'true') return true
+  } catch {
+    /* ignore */
+  }
+  return true
+}
 
 const toMonthKey = (dateText) => dateText.slice(0, 7)
 
@@ -95,6 +107,7 @@ function AttendancePage({ userId, user }) {
   const [contextMenu, setContextMenu] = useState(null)
   const [viewersModalDate, setViewersModalDate] = useState(null)
   const [attendeeCountByDate, setAttendeeCountByDate] = useState(() => new Map())
+  const [showAttendeeCounts, setShowAttendeeCounts] = useState(readShowAttendeeCountsPreference)
   const savingDateRef = useRef(new Set())
   const calendarTouchStartRef = useRef(null)
 
@@ -181,7 +194,7 @@ function AttendancePage({ userId, user }) {
   }, [user])
 
   const loadMonthAttendeeCounts = useCallback(async () => {
-    if (!supabase || !isAppAdmin) {
+    if (!supabase || !isAppAdmin || !showAttendeeCounts) {
       setAttendeeCountByDate(new Map())
       return
     }
@@ -212,7 +225,19 @@ function AttendancePage({ userId, user }) {
       next.set(dateKey, Number(row.attendee_count) || 0)
     })
     setAttendeeCountByDate(next)
-  }, [isAppAdmin, viewMonth])
+  }, [isAppAdmin, showAttendeeCounts, viewMonth])
+
+  const handleShowAttendeeCountsChange = (checked) => {
+    setShowAttendeeCounts(checked)
+    try {
+      window.localStorage.setItem(SHOW_ATTENDEE_COUNTS_STORAGE_KEY, checked ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+    if (!checked) {
+      setAttendeeCountByDate(new Map())
+    }
+  }
 
   useEffect(() => {
     void loadMonthAttendeeCounts()
@@ -428,6 +453,16 @@ function AttendancePage({ userId, user }) {
       ) : null}
 
       <div className="calendar-wrap">
+        {isAppAdmin ? (
+          <label className="attendance-admin-calendar-option">
+            <input
+              type="checkbox"
+              checked={showAttendeeCounts}
+              onChange={(ev) => handleShowAttendeeCountsChange(ev.target.checked)}
+            />
+            <span>달력에 날짜별 직관 인원 표시</span>
+          </label>
+        ) : null}
         <div className="calendar-head calendar-head--nav">
           <button
             type="button"
@@ -500,7 +535,9 @@ function AttendancePage({ userId, user }) {
                             : '',
                       cell.match?.home_away === 'HOME' ? 'calendar-cell--home-game' : '',
                       cell.match && attendedSet.has(cell.dateText) ? 'calendar-cell--attended' : '',
-                      isAppAdmin && (attendeeCountByDate.get(cell.dateText) ?? 0) > 0
+                      isAppAdmin &&
+                      showAttendeeCounts &&
+                      (attendeeCountByDate.get(cell.dateText) ?? 0) > 0
                         ? 'calendar-cell--show-attendee-count'
                         : '',
                     ]
@@ -509,7 +546,9 @@ function AttendancePage({ userId, user }) {
                     onClick={() => toggleAttendanceForDate(cell.dateText)}
                     onContextMenu={(event) => handleCalendarCellContextMenu(event, cell.dateText)}
                   >
-                    {isAppAdmin && (attendeeCountByDate.get(cell.dateText) ?? 0) > 0 ? (
+                    {isAppAdmin &&
+                    showAttendeeCounts &&
+                    (attendeeCountByDate.get(cell.dateText) ?? 0) > 0 ? (
                       <span
                         className="calendar-attendee-count"
                         aria-label={`직관 ${attendeeCountByDate.get(cell.dateText)}명`}

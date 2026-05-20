@@ -660,6 +660,12 @@ html[data-theme='dark'] body {
   color: #f1f5f9;
 }
 
+[data-theme='dark'] .attendance-admin-calendar-option {
+  background: rgba(255, 125, 44, 0.12);
+  border-color: rgba(255, 125, 44, 0.35);
+  color: #fdba74;
+}
+
 [data-theme='dark'] .attendance-admin-hint {
   background: #422006;
   color: #fdba74;
