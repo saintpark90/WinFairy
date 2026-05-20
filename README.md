@@ -30,7 +30,7 @@ cp .env.example .env.local
 ## 2) Supabase 설정
 
 1. Supabase 프로젝트 생성
-2. `supabase/schema.sql` 실행 (이미 운영 중인 DB에는 누락된 마이그레이션만 적용. 예: `supabase/migrations/20260525_profiles_display_alias.sql` — 순위용 별명·`admin_set_member_display_alias` RPC)
+2. `supabase/schema.sql` 실행 (이미 운영 중인 DB에는 누락된 마이그레이션만 적용. 예: `20260525_profiles_display_alias.sql`, `20260526_display_alias_comment.sql`, `20260527_leaderboard_profile_display_name.sql` — 순위 RPC에 `profile_display_name` 등)
 3. Authentication > Providers > Kakao 활성화
 4. Kakao Developers에서 앱 생성 후 REST API 키/Secret 등록
 5. Redirect URL 등록 (Authentication > URL Configuration):

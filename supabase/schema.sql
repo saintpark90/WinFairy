@@ -129,6 +129,7 @@ create trigger on_auth_user_created
 create or replace function public.get_attendance_leaderboard()
 returns table (
   user_id uuid,
+  profile_display_name text,
   display_name text,
   display_alias text,
   avatar_url text,
@@ -145,6 +146,7 @@ stable
 as $$
   select
     p.id as user_id,
+    nullif(trim(both from p.display_name), '') as profile_display_name,
     coalesce(nullif(trim(both from p.display_name), ''), '회원'::text) as display_name,
     nullif(trim(both from p.display_alias), '') as display_alias,
     p.avatar_url,

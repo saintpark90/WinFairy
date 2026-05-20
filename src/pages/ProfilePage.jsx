@@ -173,11 +173,11 @@ function ProfilePage({ user, onSignOut, onAccountDeleted }) {
 
         <div className="profile-alias-section">
           <label className="profile-alias-label" htmlFor="profile-display-alias">
-            순위용 별명
+            별명
           </label>
-          <p className="muted profile-alias-hint">
-            비워 두면 순위에는 카카오 닉네임(표시 이름)이 그대로 나갑니다. 입력하면 순위에는 별명이
-            보이고, 마우스를 올리면 닉네임을 확인할 수 있습니다.
+          <p className="muted profile-alias-hint" style={{ marginBottom: '0.5rem' }}>
+            순위에는 카카오(프로필) 닉네임만 표시됩니다. 별명을 저장한 경우에만 이름에 마우스를 올렸을 때
+            말풍선으로 별명이 보입니다. 별명은 관리자 회원 목록 등에서도 참고용으로 쓰입니다.
           </p>
           <div className="profile-alias-row">
             <input

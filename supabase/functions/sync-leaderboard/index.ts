@@ -30,6 +30,7 @@ type ProfileRow = {
 
 type LeaderboardRow = {
   user_id: string;
+  profile_display_name: string | null;
   display_name: string;
   display_alias: string | null;
   avatar_url: string | null;
@@ -155,7 +156,9 @@ function buildLeaderboardRows(
     if (stats.games <= 0) continue;
     const profile = profileById.get(userId);
     if (profile?.is_blocked) continue;
-    const displayName = (profile?.display_name ?? "").trim() || "회원";
+    const profileDisplayRaw = (profile?.display_name ?? "").trim();
+    const profile_display_name = profileDisplayRaw || null;
+    const displayName = profileDisplayRaw || "회원";
     const displayAliasRaw = (profile?.display_alias ?? "").trim();
     const displayAlias = displayAliasRaw ? displayAliasRaw : null;
     const winRate =
@@ -165,6 +168,7 @@ function buildLeaderboardRows(
 
     rows.push({
       user_id: userId,
+      profile_display_name,
       display_name: displayName,
       display_alias: displayAlias,
       avatar_url: profile?.avatar_url ?? null,
@@ -177,8 +181,7 @@ function buildLeaderboardRows(
   }
 
   rows.sort((a, b) => {
-    const label = (row: LeaderboardRow) =>
-      (row.display_alias ?? "").trim() || row.display_name;
+    const label = (row: LeaderboardRow) => row.display_name;
     return (
       b.wins - a.wins ||
       b.games - a.games ||

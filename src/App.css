@@ -2874,7 +2874,7 @@ button {
 }
 
 .rankings-name {
-  flex: 1 1 auto;
+  display: block;
   min-width: 0;
   font-weight: 600;
   overflow: hidden;
@@ -2882,13 +2882,64 @@ button {
   white-space: nowrap;
 }
 
-.rankings-name--has-alias {
-  cursor: help;
-  border-bottom: 1px dotted rgba(234, 88, 12, 0.45);
+/* 순위 표 닉네임: 네이티브 title 대신 호버 시 보이는 말풍선 (Windows 등에서 title 미표시 대비) */
+.rankings-nickname-hover {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  align-self: center;
 }
 
-.rankings-podium-avatar-name.rankings-name--has-alias {
-  border-bottom-color: rgba(234, 88, 12, 0.45);
+.rankings-nickname-hover:hover,
+.rankings-nickname-hover:focus-within {
+  z-index: 40;
+}
+
+.rankings-nickname-hover__tip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  z-index: 50;
+  max-width: min(280px, 70vw);
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+  word-break: break-word;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease,
+    visibility 0.12s ease;
+}
+
+.rankings-nickname-hover:hover .rankings-nickname-hover__tip,
+.rankings-nickname-hover:focus-within .rankings-nickname-hover__tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+.rankings-nickname-hover--podium {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.rankings-nickname-hover--podium .rankings-nickname-hover__tip {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  text-align: center;
 }
 
 .rankings-row-me {

@@ -361,7 +361,6 @@ function AdminMembersCard({ currentUserId, isSuperAdmin }) {
                           type="text"
                           className="admin-member-alias-input"
                           maxLength={40}
-                          placeholder="순위 표시용"
                           aria-label={`${member.display_name} 별명`}
                           defaultValue={member.display_alias ?? ''}
                           key={`${member.user_id}-${member.display_alias ?? ''}`}

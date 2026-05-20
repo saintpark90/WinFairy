@@ -21,9 +21,8 @@ const SORTABLE_COLUMNS = [
   { key: 'win_rate', label: '승률' },
 ]
 
-/** 순위 표시명(별명 우선) — 정렬·동률 비교에 사용 */
-const rankNameLabel = (row) =>
-  (String(row?.display_alias ?? '').trim() || String(row?.display_name ?? ''))
+/** 동률 시 이름 정렬 — 순위 표에는 항상 카카오(프로필) 닉네임만 사용 */
+const rankNameLabel = (row) => String(row?.display_name ?? '')
 
 /** 동률 시 2·3차 정렬 (방향: asc | desc) */
 const SORT_TIE_BREAKERS = {
@@ -87,13 +86,17 @@ const formatPodiumStat = (row, sortKey) => {
   }
 }
 
+/** 순위 표는 카카오 닉네임만; 말풍선은 별명이 있을 때만 별명 텍스트 표시 */
+function trimmedDisplayAlias(displayAlias) {
+  return String(displayAlias ?? '').trim()
+}
+
 function RankingsUserCell({ displayName, displayAlias, avatarUrl }) {
   const [imgStage, setImgStage] = useState(0)
-  const trimmedAlias = String(displayAlias ?? '').trim()
-  const nickname = displayName || '회원'
-  const label = trimmedAlias || nickname
+  const label = displayName || '회원'
+  const aliasTip = trimmedDisplayAlias(displayAlias)
+  const showAliasTip = aliasTip.length > 0
   const initial = label.slice(0, 1)
-  const showNicknameTooltip = Boolean(trimmedAlias)
 
   const avatarCandidates = useMemo(() => {
     const secured = normalizeAvatarUrl(avatarUrl)
@@ -148,10 +151,14 @@ function RankingsUserCell({ displayName, displayAlias, avatarUrl }) {
         </span>
       )}
       <span
-        className={`rankings-name${showNicknameTooltip ? ' rankings-name--has-alias' : ''}`}
-        title={showNicknameTooltip ? `닉네임: ${nickname}` : undefined}
+        className={`rankings-nickname-hover${showAliasTip ? ' rankings-nickname-hover--has-tip' : ''}`}
       >
-        {label}
+        <span className="rankings-name rankings-nickname-hover__label">{label}</span>
+        {showAliasTip ? (
+          <span className="rankings-nickname-hover__tip" aria-hidden="true">
+            {aliasTip}
+          </span>
+        ) : null}
       </span>
     </span>
   )
@@ -159,11 +166,10 @@ function RankingsUserCell({ displayName, displayAlias, avatarUrl }) {
 
 function RankingsPodiumAvatar({ displayName, displayAlias, avatarUrl, modifier }) {
   const [imgStage, setImgStage] = useState(0)
-  const trimmedAlias = String(displayAlias ?? '').trim()
-  const nickname = displayName || '회원'
-  const label = trimmedAlias || nickname
+  const label = displayName || '회원'
+  const aliasTip = trimmedDisplayAlias(displayAlias)
+  const showAliasTip = aliasTip.length > 0
   const initial = label.slice(0, 1)
-  const showNicknameTooltip = Boolean(trimmedAlias)
   const avatarPx = modifier === 'gold' ? PODIUM_AVATAR_PX.gold : PODIUM_AVATAR_PX.silver
 
   const avatarCandidates = useMemo(() => {
@@ -217,12 +223,22 @@ function RankingsPodiumAvatar({ displayName, displayAlias, avatarUrl, modifier }
           {initial}
         </span>
       )}
-      <span
-        className={`rankings-podium-avatar-name${showNicknameTooltip ? ' rankings-name--has-alias' : ''}`}
-        title={showNicknameTooltip ? `닉네임: ${nickname}` : undefined}
+      <div
+        className={[
+          'rankings-nickname-hover',
+          'rankings-nickname-hover--podium',
+          showAliasTip ? 'rankings-nickname-hover--has-tip' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
-        {label}
-      </span>
+        <span className="rankings-podium-avatar-name rankings-nickname-hover__label">{label}</span>
+        {showAliasTip ? (
+          <span className="rankings-nickname-hover__tip" aria-hidden="true">
+            {aliasTip}
+          </span>
+        ) : null}
+      </div>
     </div>
   )
 }
