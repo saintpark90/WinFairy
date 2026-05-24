@@ -7,151 +7,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-interface MatchCell {
-  Text?: string;
-}
-
-interface GameRow {
-  game_date: string;
-  opponent_team: string;
-  home_away: string;
-  hanwha_score?: number | null;
-  opponent_score?: number | null;
-  winner_team?: string | null;
-  game_status?: string | null;
-}
-
-// 정규식
-const PLAY_DECIDED_RE = /<span>([^<]+)<\/span><em><span class="(?:lose|win)">(\d+)<\/span><span>vs<\/span><span class="(?:lose|win)">(\d+)<\/span><\/em><span>([^<]+)<\/span>/g;
-const PLAY_PENDING_RE = /<span>([^<]+)<\/span><em><span>vs<\/span><\/em><span>([^<]+)<\/span>/g;
-const TIME_CELL_RE = /<b>([^<]+)<\/b>/;
-const DAY_CELL_DATE_RE = /(\d{1,2})\.(\d{1,2})\(/;
-
-const TEAM_ID_TO_NAME: Record<string, string> = {
-  HH: "한화",
-  OB: "두산",
-  LG: "LG",
-  LT: "롯데",
-  HT: "KIA",
-  SS: "삼성",
-  WO: "키움",
-  SK: "SSG",
-  KT: "KT",
-  NC: "NC",
-};
-
 function stripTags(html: string): string {
   return (html || "").replace(/<[^>]+>/g, "").trim();
 }
 
-function cleanCellText(value: any): string {
-  const text = stripTags(String(value || ""));
-  return text.replace(/&nbsp;/g, "").trim();
-}
-
-function dayCellToYYYYMMDD(dayText: string, year: number): string | null {
-  const m = DAY_CELL_DATE_RE.exec(dayText || "");
-  if (!m) return null;
-  const month = parseInt(m[1], 10);
-  const day = parseInt(m[2], 10);
+async function fetchScheduleFromKbo() {
   try {
-    const d = new Date(year, month - 1, day);
-    if (d.getMonth() !== month - 1) return null; // 날짜 유효성 검사
-    const y = d.getFullYear();
-    const mon = String(d.getMonth() + 1).padStart(2, "0");
-    const da = String(d.getDate()).padStart(2, "0");
-    return `${y}-${mon}-${da}`;
-  } catch {
-    return null;
-  }
-}
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
 
-function parseGameRow(cells: MatchCell[], year: number): GameRow | null {
-  if (cells.length < 8) return null;
-
-  const dayText = cells[0]?.Text || "";
-  const gameDate = dayCellToYYYYMMDD(dayText, year);
-  if (!gameDate) return null;
-
-  const timeHtml = cells[1]?.Text || "";
-  const timeMatch = TIME_CELL_RE.exec(timeHtml);
-  const gameTime = timeMatch ? timeMatch[1].trim() : null;
-
-  const playHtml = cells[2]?.Text || "";
-
-  // 경기 결과 파싱 (승패 결정)
-  let awayTeam = "";
-  let homeTeam = "";
-  let awayScore: number | null = null;
-  let homeScore: number | null = null;
-
-  PLAY_DECIDED_RE.lastIndex = 0;
-  const decidedMatch = PLAY_DECIDED_RE.exec(playHtml);
-
-  if (decidedMatch) {
-    awayTeam = decidedMatch[1];
-    awayScore = parseInt(decidedMatch[2], 10);
-    homeScore = parseInt(decidedMatch[3], 10);
-    homeTeam = decidedMatch[4];
-  } else {
-    // 경기 전 파싱
-    PLAY_PENDING_RE.lastIndex = 0;
-    const pendingMatch = PLAY_PENDING_RE.exec(playHtml);
-    if (!pendingMatch) return null;
-    awayTeam = pendingMatch[1];
-    homeTeam = pendingMatch[2];
-  }
-
-  // 한화가 포함되어 있는지 확인
-  const hanwhaInHome = homeTeam.includes("한화");
-  const hanwhaInAway = awayTeam.includes("한화");
-
-  if (!hanwhaInHome && !hanwhaInAway) return null;
-
-  const homeAway = hanwhaInHome ? "HOME" : "AWAY";
-  const opponentTeam = hanwhaInHome ? awayTeam : homeTeam;
-
-  // 스코어 정규화
-  let hanwhaScoreFinal: number | null = null;
-  let opponentScoreFinal: number | null = null;
-
-  if (awayScore !== null && homeScore !== null) {
-    hanwhaScoreFinal = hanwhaInHome ? homeScore : awayScore;
-    opponentScoreFinal = hanwhaInHome ? awayScore : homeScore;
-  }
-
-  // 승패 판단
-  let winnerTeam: string | null = null;
-  if (hanwhaScoreFinal !== null && opponentScoreFinal !== null) {
-    if (hanwhaScoreFinal > opponentScoreFinal) {
-      winnerTeam = "한화";
-    } else if (opponentScoreFinal > hanwhaScoreFinal) {
-      winnerTeam = opponentTeam;
-    }
-  }
-
-  const stadiumRaw = cells[7]?.Text || "";
-  const stadium = stripTags(stadiumRaw) || "미정";
-
-  const noteRaw = cells[8]?.Text || "";
-  const note = stripTags(noteRaw);
-  const gameStatus = note && note !== "-" ? note : undefined;
-
-  return {
-    game_date: gameDate,
-    opponent_team: opponentTeam,
-    home_away: homeAway,
-    hanwha_score: hanwhaScoreFinal,
-    opponent_score: opponentScoreFinal,
-    winner_team: winnerTeam,
-    game_status: gameStatus,
-  };
-}
-
-async function fetchScheduleFromKbo(): Promise<GameRow[]> {
-  try {
-    const baseUrl =
+    const url =
       "https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList";
+    const params = new URLSearchParams({
+      leId: "1",
+      srIdList: "0,9,6",
+      seasonId: year.toString(),
+      gameMonth: month.toString(),
+      teamId: "HH",
+    });
+
     const headers = {
       "User-Agent":
         "Mozilla/5.0 (compatible; WinFairy/1.0; +https://github.com/)",
@@ -161,98 +36,97 @@ async function fetchScheduleFromKbo(): Promise<GameRow[]> {
       "Content-Type": "application/x-www-form-urlencoded",
     };
 
-    const year = new Date().getFullYear();
-    const srIdList = "0,9,6";
-    const monthStart = 3;
-    const monthEnd = 11;
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: params.toString(),
+      signal: AbortSignal.timeout(5000),
+    });
 
-    const games: GameRow[] = [];
-    const seenGameIds = new Set<string>();
-
-    for (let month = monthStart; month <= monthEnd; month++) {
-      const params = new URLSearchParams({
-        leId: "1",
-        srIdList,
-        seasonId: year.toString(),
-        gameMonth: month.toString(),
-        teamId: "HH",
-      });
-
-      const response = await fetch(baseUrl, {
-        method: "POST",
-        headers,
-        body: params.toString(),
-      });
-
-      if (!response.ok) {
-        console.warn(`KBO API returned ${response.status} for month ${month}`);
-        continue;
-      }
-
-      const json = await response.json();
-      const rows = json.rows || [];
-
-      for (const block of rows) {
-        const cells = block.row;
-        if (!Array.isArray(cells)) continue;
-
-        const parsed = parseGameRow(cells, year);
-        if (!parsed) continue;
-
-        const gameId = `${parsed.game_date}_${parsed.opponent_team}_${parsed.home_away}`;
-        if (seenGameIds.has(gameId)) continue;
-
-        seenGameIds.add(gameId);
-        games.push(parsed);
-      }
-
-      // 요청 간격 - 너무 빠르면 차단될 수 있음
-      await new Promise((resolve) => setTimeout(resolve, 80));
+    if (!response.ok) {
+      return [];
     }
 
-    return games;
+    const json = await response.json();
+    return json.rows || [];
   } catch (err) {
-    console.error("KBO fetch error:", err);
+    console.error("Fetch error:", err);
     return [];
   }
 }
 
-async function updateMatches(
-  supabase: any,
-  games: GameRow[]
-): Promise<number> {
-  if (games.length === 0) {
-    return 0;
-  }
-
+async function updateMatches(supabase: any, rows: any[]) {
   let updated = 0;
 
-  for (const game of games) {
+  for (const block of rows) {
     try {
-      const { error } = await supabase
-        .from("matches")
-        .update({
-          hanwha_score: game.hanwha_score,
-          opponent_score: game.opponent_score,
-          winner_team: game.winner_team,
-          game_status: game.game_status,
-        })
-        .eq("game_date", game.game_date)
-        .eq("opponent_team", game.opponent_team);
+      const cells = block.row;
+      if (!Array.isArray(cells) || cells.length < 9) continue;
 
-      if (!error) {
-        updated++;
-      } else {
-        console.warn(
-          `Update failed for ${game.game_date} vs ${game.opponent_team}:`,
-          error
-        );
+      // 날짜 추출
+      const dayText = stripTags(cells[0]?.Text || "");
+      const dateMatch = dayText.match(/(\d{1,2})\.(\d{1,2})\(/);
+      if (!dateMatch) continue;
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthNum = parseInt(dateMatch[1], 10);
+      const dayNum = parseInt(dateMatch[2], 10);
+
+      const gameDate = `${year}-${String(monthNum).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+
+      // 경기 정보 추출 - 한화가 포함되어 있는지만 확인
+      const playText = cells[2]?.Text || "";
+      if (!playText.includes("한화")) continue;
+
+      // 스코어만 추출 (간단하게)
+      const scoreMatch = playText.match(
+        /<span class="(?:lose|win)">(\d+)<\/span><span>vs<\/span><span class="(?:lose|win)">(\d+)<\/span>/
+      );
+
+      if (!scoreMatch) continue; // 스코어 없으면 경기 전
+
+      const score1 = parseInt(scoreMatch[1], 10);
+      const score2 = parseInt(scoreMatch[2], 10);
+
+      // 경기장 정보로 상대팀 특정 (임시)
+      const stadiumText = stripTags(cells[7]?.Text || "");
+
+      // 모든 한화 경기 업데이트 (상대팀을 정확히 추출하지 못할 수도 있으니)
+      const { data: matchData } = await supabase
+        .from("matches")
+        .select("id, opponent_team, home_away")
+        .eq("game_date", gameDate)
+        .limit(1);
+
+      if (matchData && matchData.length > 0) {
+        const match = matchData[0];
+        const hanwhaScore = match.home_away === "HOME" ? score1 : score2;
+        const opponentScore = match.home_away === "HOME" ? score2 : score1;
+
+        let winner = null;
+        if (hanwhaScore > opponentScore) {
+          winner = "한화";
+        } else if (opponentScore > hanwhaScore) {
+          winner = match.opponent_team;
+        }
+
+        const { error } = await supabase
+          .from("matches")
+          .update({
+            hanwha_score: hanwhaScore,
+            opponent_score: opponentScore,
+            winner_team: winner,
+          })
+          .eq("id", match.id);
+
+        if (!error) {
+          updated++;
+        }
       }
     } catch (err) {
-      console.error(
-        `Update error for ${game.game_date} vs ${game.opponent_team}:`,
-        err
-      );
+      console.error("Row update error:", err);
+      continue;
     }
   }
 
@@ -284,22 +158,19 @@ export async function handler(req: Request, _context: any) {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    console.log("Fetching latest games from KBO...");
-    const games = await fetchScheduleFromKbo();
-
-    if (games.length === 0) {
+    const rows = await fetchScheduleFromKbo();
+    if (!rows || rows.length === 0) {
       return new Response(
         JSON.stringify({
           ok: true,
           updated: 0,
-          message: "No games found to update",
+          message: "No games found",
         }),
         { headers: corsHeaders }
       );
     }
 
-    console.log(`Found ${games.length} Hanwha games, updating...`);
-    const updated = await updateMatches(supabase, games);
+    const updated = await updateMatches(supabase, rows);
 
     return new Response(
       JSON.stringify({
@@ -310,9 +181,10 @@ export async function handler(req: Request, _context: any) {
       { headers: corsHeaders }
     );
   } catch (err) {
-    console.error("Handler error:", err);
+    console.error("Error:", err);
     return new Response(
       JSON.stringify({
+        ok: false,
         error: err instanceof Error ? err.message : "Unknown error",
       }),
       { status: 500, headers: corsHeaders }

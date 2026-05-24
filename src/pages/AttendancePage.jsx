@@ -539,15 +539,17 @@ function AttendancePage({ userId, user }) {
               }}
             />
           </label>
-          <button
-            type="button"
-            className="calendar-refresh-button"
-            aria-label="경기 결과 갱신"
-            disabled={calendarLoading || isRefreshing}
-            onClick={handleRefreshMatchResults}
-          >
-            {isRefreshing ? '⟳ 갱신 중...' : '⟳ 경기결과 새로고침'}
-          </button>
+          {isAppAdmin ? (
+            <button
+              type="button"
+              className="calendar-refresh-button"
+              aria-label="경기 결과 갱신"
+              disabled={calendarLoading || isRefreshing}
+              onClick={handleRefreshMatchResults}
+            >
+              {isRefreshing ? '⟳ 갱신 중...' : '⟳ 경기결과 새로고침'}
+            </button>
+          ) : null}
         </div>
 
         {calendarLoading ? <p>경기 일정을 불러오는 중...</p> : null}
