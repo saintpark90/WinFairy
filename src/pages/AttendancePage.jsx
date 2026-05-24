@@ -302,6 +302,8 @@ function AttendancePage({ userId, user }) {
     [attendedSet, matchesByDate],
   )
 
+  const REFRESH_MATCH_RESULTS_TIMEOUT_MS = 55_000
+
   const handleRefreshMatchResults = async () => {
     if (!supabase) {
       setActionMessage('Supabase 환경변수가 비어 있어 경기 정보를 불러올 수 없습니다.')
@@ -312,15 +314,31 @@ function AttendancePage({ userId, user }) {
     setActionMessage('')
 
     try {
-      // Edge Function을 호출해서 KBO 최신 경기 정보를 가져오고 Supabase 업데이트
-      const { data, error } = await supabase.functions.invoke('refresh-match-results', {
+      const invokePromise = supabase.functions.invoke('refresh-match-results', {
         method: 'POST',
         body: {},
       })
 
-      if (error) throw error
+      const { data, error } = await Promise.race([
+        invokePromise,
+        new Promise((_, reject) => {
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  '경기 결과 요청 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.',
+                ),
+              ),
+            REFRESH_MATCH_RESULTS_TIMEOUT_MS,
+          )
+        }),
+      ])
 
-      // 성공 후 최신 경기 정보 재조회
+      if (error) throw error
+      if (data?.ok === false) {
+        throw new Error(data?.error ?? '경기 정보 갱신에 실패했습니다.')
+      }
+
       const matchSelect =
         'id, game_date, opponent_team, stadium, home_away, game_status, game_start_time, hanwha_score, opponent_score, winner_team'
 
@@ -333,11 +351,18 @@ function AttendancePage({ userId, user }) {
 
       setMatches(updatedMatches ?? [])
 
-      const updated = data?.updated ?? 0
+      const updated = Number(data?.updated ?? 0)
+      const parsed = Number(data?.parsed ?? 0)
       if (updated > 0) {
         setActionMessage(`경기 결과가 ${updated}경기 갱신되었습니다.`)
+      } else if (parsed === 0) {
+        setActionMessage(
+          'KBO에서 반영할 종료 경기를 찾지 못했습니다. GitHub Actions 동기화 상태를 확인해 주세요.',
+        )
       } else {
-        setActionMessage('경기 정보가 최신 상태입니다.')
+        setActionMessage(
+          'KBO 일정과 DB가 이미 같거나, 해당 날짜 경기 행이 없어 갱신되지 않았습니다.',
+        )
       }
     } catch (err) {
       setActionMessage(err?.message ?? '경기 정보 갱신에 실패했습니다.')
