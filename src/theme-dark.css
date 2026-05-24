@@ -389,6 +389,21 @@ html[data-theme='dark'] body {
   background: #475569;
 }
 
+[data-theme='dark'] .calendar-refresh-button {
+  background: #167533;
+  color: #dcfce7;
+  border-color: #22c55e;
+}
+
+[data-theme='dark'] .calendar-refresh-button:hover:not(:disabled) {
+  background: #15803d;
+  border-color: #4ade80;
+}
+
+[data-theme='dark'] .calendar-refresh-button:active:not(:disabled) {
+  background: #16a34a;
+}
+
 [data-theme='dark'] .calendar-month-title {
   color: #f1f5f9;
 }

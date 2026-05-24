@@ -108,6 +108,7 @@ function AttendancePage({ userId, user }) {
   const [viewersModalDate, setViewersModalDate] = useState(null)
   const [attendeeCountByDate, setAttendeeCountByDate] = useState(() => new Map())
   const [showAttendeeCounts, setShowAttendeeCounts] = useState(readShowAttendeeCountsPreference)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const savingDateRef = useRef(new Set())
   const calendarTouchStartRef = useRef(null)
 
@@ -300,6 +301,50 @@ function AttendancePage({ userId, user }) {
         }),
     [attendedSet, matchesByDate],
   )
+
+  const handleRefreshMatchResults = async () => {
+    if (!supabase) {
+      setActionMessage('Supabase 환경변수가 비어 있어 경기 정보를 불러올 수 없습니다.')
+      return
+    }
+
+    setIsRefreshing(true)
+    setActionMessage('')
+
+    try {
+      // Edge Function을 호출해서 KBO 최신 경기 정보를 가져오고 Supabase 업데이트
+      const { data, error } = await supabase.functions.invoke('refresh-match-results', {
+        method: 'POST',
+        body: {},
+      })
+
+      if (error) throw error
+
+      // 성공 후 최신 경기 정보 재조회
+      const matchSelect =
+        'id, game_date, opponent_team, stadium, home_away, game_status, game_start_time, hanwha_score, opponent_score, winner_team'
+
+      const { data: updatedMatches, error: fetchError } = await supabase
+        .from('matches')
+        .select(matchSelect)
+        .order('game_date', { ascending: false })
+
+      if (fetchError) throw fetchError
+
+      setMatches(updatedMatches ?? [])
+
+      const updated = data?.updated ?? 0
+      if (updated > 0) {
+        setActionMessage(`경기 결과가 ${updated}경기 갱신되었습니다.`)
+      } else {
+        setActionMessage('경기 정보가 최신 상태입니다.')
+      }
+    } catch (err) {
+      setActionMessage(err?.message ?? '경기 정보 갱신에 실패했습니다.')
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   const toggleAttendanceForDate = (dateText) => {
     if (!supabase) {
@@ -494,6 +539,15 @@ function AttendancePage({ userId, user }) {
               }}
             />
           </label>
+          <button
+            type="button"
+            className="calendar-refresh-button"
+            aria-label="경기 결과 갱신"
+            disabled={calendarLoading || isRefreshing}
+            onClick={handleRefreshMatchResults}
+          >
+            {isRefreshing ? '⟳ 갱신 중...' : '⟳ 경기결과 새로고침'}
+          </button>
         </div>
 
         {calendarLoading ? <p>경기 일정을 불러오는 중...</p> : null}

@@ -21,10 +21,13 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy sync-leaderboard
+      - name: Deploy Supabase Functions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy sync-leaderboard \
+            --project-ref pxienajdgtrzbfdiwbsh \
+            --use-api
+          supabase functions deploy refresh-match-results \
             --project-ref pxienajdgtrzbfdiwbsh \
             --use-api
