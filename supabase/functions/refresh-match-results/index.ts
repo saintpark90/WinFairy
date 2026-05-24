@@ -164,6 +164,7 @@ async function updateMatchFromParsed(
     opponent_score: opponentScore,
     winner_team: winner,
     updated_at: new Date().toISOString(),
+    source: "KBO",
   };
   if (parsed.gameStartTime) update.game_start_time = parsed.gameStartTime;
   if (parsed.gameStatus) update.game_status = parsed.gameStatus;

@@ -1031,6 +1031,57 @@ def build_player_stats_from_kbo_row(
   return _attach_back_numbers(deduped, roster_map or {})
 
 
+def normalize_match_core_only(row: Dict[str, Any], season: int) -> Dict[str, Any] | None:
+  """일정 API만으로 승패·스코어 반영 (박스스코어 API 호출 없음)."""
+  home_id = (row.get("HOME_ID") or "").strip()
+  away_id = (row.get("AWAY_ID") or "").strip()
+  home_name = TEAM_ID_TO_NAME.get(home_id, (row.get("HOME_NM") or "").strip())
+  away_name = TEAM_ID_TO_NAME.get(away_id, (row.get("AWAY_NM") or "").strip())
+  if not any(k in home_name for k in HANWHA_KEYWORDS) and not any(
+    k in away_name for k in HANWHA_KEYWORDS
+  ):
+    return None
+
+  raw_date = row.get("G_DT") or row.get("gameDate")
+  if not raw_date:
+    return None
+
+  if len(raw_date) == 8 and raw_date.isdigit():
+    game_date = dt.datetime.strptime(raw_date, "%Y%m%d").date().isoformat()
+  else:
+    game_date = raw_date[:10]
+
+  is_home = any(k in home_name for k in HANWHA_KEYWORDS)
+  hanwha_score = parse_int(row.get("B_SCORE_CN") if is_home else row.get("T_SCORE_CN"))
+  opp_score = parse_int(row.get("T_SCORE_CN") if is_home else row.get("B_SCORE_CN"))
+
+  winner = None
+  if hanwha_score is not None and opp_score is not None:
+    if hanwha_score > opp_score:
+      winner = "한화 이글스"
+    elif opp_score > hanwha_score:
+      winner = away_name if is_home else home_name
+
+  g_tm = row.get("G_TM") or row.get("gameTime")
+  game_start_time = None
+  if isinstance(g_tm, str) and g_tm.strip():
+    game_start_time = g_tm.strip()
+
+  return {
+    "game_date": game_date,
+    "season": season,
+    "opponent_team": away_name if is_home else home_name,
+    "stadium": row.get("S_NM") or row.get("stadium") or "미정",
+    "home_away": "HOME" if is_home else "AWAY",
+    "hanwha_score": hanwha_score,
+    "opponent_score": opp_score,
+    "winner_team": winner,
+    "game_status": row.get("GAME_SC_NM") or row.get("GAME_STATE") or row.get("gameStatus"),
+    "game_start_time": game_start_time,
+    "source": "KBO",
+  }
+
+
 def normalize_match(
   row: Dict[str, Any], season: int, roster_map: Dict[str, int] | None = None
 ) -> Dict[str, Any] | None:
@@ -1110,7 +1161,9 @@ _MATCH_CORE_FIELDS = (
 
 
 def _match_core_payload(row: Dict[str, Any]) -> Dict[str, Any]:
-  return {key: row[key] for key in _MATCH_CORE_FIELDS if key in row}
+  payload = {key: row.get(key) for key in _MATCH_CORE_FIELDS}
+  payload["updated_at"] = dt.datetime.now(dt.timezone.utc).isoformat()
+  return payload
 
 
 def _post_upsert_batches(
@@ -1131,12 +1184,22 @@ def _post_upsert_batches(
       )
 
 
-def upsert_matches(supabase_url: str, service_role_key: str, rows: List[Dict[str, Any]]) -> None:
+def upsert_matches(
+  supabase_url: str,
+  service_role_key: str,
+  rows: List[Dict[str, Any]],
+  *,
+  scores_only: bool = False,
+) -> None:
   """
   Supabase upsert는 요청 JSON 키 집합이 배치마다 같아야 합니다.
   키가 섞이면 일부 경기(특히 오늘 경기)의 스코어가 갱신되지 않을 수 있어 2단계로 나눕니다.
   1) 승패·스코어 등 공통 필드  2) player_stats 가 있는 경기(스코어 포함)
+  scores_only=True 이면 1)만 수행 (종료 직후 스코어 빠른 반영용).
   """
+  if not rows:
+    return
+
   endpoint = f"{supabase_url}/rest/v1/matches?on_conflict=game_date"
   headers = {
     "apikey": service_role_key,
@@ -1149,9 +1212,46 @@ def upsert_matches(supabase_url: str, service_role_key: str, rows: List[Dict[str
   core_rows = [_match_core_payload(row) for row in rows]
   _post_upsert_batches(endpoint, headers, core_rows, batch_size, "core")
 
+  if scores_only:
+    return
+
   detail_rows = [row for row in rows if row.get("player_stats")]
   if detail_rows:
     _post_upsert_batches(endpoint, headers, detail_rows, batch_size, "detail")
+
+
+def sync_recent_schedule_scores(
+  supabase_url: str,
+  service_role_key: str,
+  season: int,
+  *,
+  lookback_days: int | None = None,
+) -> int:
+  """
+  KBO 일정 API만 사용해 최근 경기 스코어를 먼저/다시 반영합니다.
+  박스스코어 수집이 오래 걸리거나 중간에 실패해도 오늘 경기 결과가 DB에 남도록 합니다.
+  """
+  days = lookback_days or int(os.getenv("KBO_SCORE_LOOKBACK_DAYS", "21"))
+  today = dt.date.today()
+  window_start = today - dt.timedelta(days=days)
+
+  raw_rows = fetch_schedule_from_schedule_page(season)
+  recent: List[Dict[str, Any]] = []
+  for row in raw_rows:
+    normalized = normalize_match_core_only(row, season)
+    if not normalized:
+      continue
+    game_date = dt.date.fromisoformat(normalized["game_date"])
+    if game_date < window_start:
+      continue
+    if normalized.get("hanwha_score") is None or normalized.get("opponent_score") is None:
+      continue
+    recent.append(normalized)
+
+  if recent:
+    upsert_matches(supabase_url, service_role_key, recent, scores_only=True)
+
+  return len(recent)
 
 
 def _load_local_env() -> None:
@@ -1184,6 +1284,12 @@ def main() -> None:
     os.path.join(os.path.dirname(__file__), "..", "src", "data", "hanwhaRosterNumbers.json"),
   )
 
+  project_ref = supabase_url.rstrip("/").split("//", 1)[-1].split(".", 1)[0]
+  print(f"Supabase project ref: {project_ref}")
+
+  quick_count = sync_recent_schedule_scores(supabase_url, service_role_key, season)
+  print(f"Quick score sync (recent finished games): {quick_count}")
+
   roster_map = fetch_hanwha_roster_number_map()
   print(f"Hanwha roster (initial): {len(roster_map)} players")
 
@@ -1211,6 +1317,9 @@ def main() -> None:
 
   upsert_matches(supabase_url, service_role_key, normalized)
   print(f"Upsert complete: {len(normalized)} matches")
+
+  quick_count_after = sync_recent_schedule_scores(supabase_url, service_role_key, season)
+  print(f"Quick score sync (post full upsert): {quick_count_after}")
 
   try:
     from sync_leaderboard import sync_leaderboard
