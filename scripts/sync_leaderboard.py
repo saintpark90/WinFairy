@@ -21,6 +21,26 @@ HANWHA = "한화"
 BUCKET = "public-data"
 OBJECT_PATH = "leaderboard.json"
 CANCELLED_RE = re.compile(r"취소|노게임|무효|제외")
+IN_PROGRESS_RE = re.compile(r"진행|경기\s*중", re.I)
+
+
+def is_match_in_progress(match: dict[str, Any] | None) -> bool:
+  if not match:
+    return False
+  if match.get("game_status") and IN_PROGRESS_RE.search(str(match["game_status"])):
+    return True
+  winner = match.get("winner_team")
+  hanwha_score = match.get("hanwha_score")
+  opponent_score = match.get("opponent_score")
+  if (
+    not str(winner or "").strip()
+    and isinstance(hanwha_score, (int, float))
+    and isinstance(opponent_score, (int, float))
+    and hanwha_score == opponent_score
+    and hanwha_score == 0
+  ):
+    return True
+  return False
 
 
 def is_match_cancelled(match: dict[str, Any] | None) -> bool:
@@ -33,6 +53,8 @@ def is_match_decided(match: dict[str, Any] | None) -> bool:
   if not match:
     return False
   if is_match_cancelled(match):
+    return False
+  if is_match_in_progress(match):
     return False
   winner = match.get("winner_team")
   if winner is not None and str(winner).strip():

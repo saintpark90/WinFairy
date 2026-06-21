@@ -4,6 +4,7 @@ import AttendancePlayerRankings from '../components/AttendancePlayerRankings'
 import {
   aggregateBattingAvgFromTotals,
   formatBattingAvg,
+  getMatchResultKind,
   isHanwhaWin,
   isMatchDecided,
 } from '../lib/stats'
@@ -67,12 +68,7 @@ const avgByKeys = (players, keys, digits = 3) => {
 const computeTeamPitching = (decidedMatches) => {
   const games = decidedMatches.length
   const wins = decidedMatches.filter((m) => isHanwhaWin(m)).length
-  const draws = decidedMatches.filter(
-    (m) =>
-      typeof m.hanwha_score === 'number' &&
-      typeof m.opponent_score === 'number' &&
-      m.hanwha_score === m.opponent_score,
-  ).length
+  const draws = decidedMatches.filter((m) => getMatchResultKind(m) === 'draw').length
   const losses = games - wins - draws
 
   const pitchers = decidedMatches.flatMap((m) =>

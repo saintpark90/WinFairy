@@ -360,6 +360,11 @@ html[data-theme='dark'] body {
   border-color: #334155;
 }
 
+[data-theme='dark'] .attendance-page .calendar-cell--result-in_progress {
+  background: #3b2f1a;
+  border-color: #92400e;
+}
+
 [data-theme='dark'] .attendance-page .calendar-cell--public-holiday {
   background: #3f1d1d;
 }
@@ -420,9 +425,17 @@ html[data-theme='dark'] body {
   color: #94a3b8;
 }
 
+[data-theme='dark'] .attendance-page .calendar-result-under-emblem--in_progress::after {
+  color: #fbbf24;
+}
+
 [data-theme='dark'] .attendance-page .attendance-list-result--pending::after,
 [data-theme='dark'] .attendance-page .attendance-list-result--none::after {
   color: #94a3b8;
+}
+
+[data-theme='dark'] .attendance-page .attendance-list-result--in_progress::after {
+  color: #fbbf24;
 }
 
 [data-theme='dark'] .login-screen {
@@ -609,6 +622,7 @@ html[data-theme='dark'] body {
 }
 
 [data-theme='dark'] .attendance-list-row--pending,
+[data-theme='dark'] .attendance-list-row--in_progress,
 [data-theme='dark'] .attendance-list-row--none {
   background: #1a2332;
 }

@@ -9,6 +9,7 @@ import {
   formatWpa,
   getMatchResultKind,
   isMatchCancelled,
+  isMatchDecided,
 } from '../lib/stats'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 import { formatStadiumShort } from '../lib/stadiumShort'
@@ -32,18 +33,14 @@ const recentGameResultLabel = (match) => {
   if (k === 'loss') return '패'
   if (k === 'draw') return '무'
   if (k === 'cancelled') return '취소'
+  if (k === 'in_progress') return '경기 중'
   if (k === 'pending') return '경기 전'
   return '–'
 }
 
-/** 직관 최근 N경기 카드: 경기 전·취소·스코어 미기록 제외 */
+/** 직관 최근 N경기 카드: 경기 전·진행 중·취소·스코어 미기록 제외 */
 const hasRecordedScore = (match) =>
-  Boolean(
-    match &&
-      !isMatchCancelled(match) &&
-      typeof match.hanwha_score === 'number' &&
-      typeof match.opponent_score === 'number',
-  )
+  Boolean(match && isMatchDecided(match))
 
 const recentGameScoreText = (match) => {
   if (!hasRecordedScore(match)) return '–'

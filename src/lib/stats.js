@@ -38,10 +38,30 @@ export const isMatchCancelled = (match) => {
   return /취소|노게임|무효|제외/.test(s)
 }
 
+const IN_PROGRESS_RE = /진행|경기\s*중/i
+
+/** KBO 동기화: 스코어는 있으나 REVIEW 링크 없음 → `game_status`가 '진행중' */
+export const isMatchInProgress = (match) => {
+  if (!match) return false
+  if (match.game_status && IN_PROGRESS_RE.test(String(match.game_status))) return true
+  // 0:0 동점·무승자는 진행 중 경기 초반 상태 (종료 무승부는 보통 0:0이 아님)
+  if (
+    !String(match.winner_team ?? '').trim() &&
+    typeof match.hanwha_score === 'number' &&
+    typeof match.opponent_score === 'number' &&
+    match.hanwha_score === match.opponent_score &&
+    match.hanwha_score === 0
+  ) {
+    return true
+  }
+  return false
+}
+
 /** 승패가 확정된 경기만 집계에 사용합니다. */
 export const isMatchDecided = (match) => {
   if (!match) return false
   if (isMatchCancelled(match)) return false
+  if (isMatchInProgress(match)) return false
   const w = match.winner_team
   if (w != null && String(w).trim() !== '') return true
   if (
@@ -78,10 +98,25 @@ const isHanwhaLoss = (match) =>
 export const getMatchResultKind = (match) => {
   if (!match) return 'none'
   if (isMatchCancelled(match)) return 'cancelled'
+  if (isMatchInProgress(match)) return 'in_progress'
   if (!isMatchDecided(match)) return 'pending'
   if (isDraw(match)) return 'draw'
   if (isHanwhaWin(match)) return 'win'
   return 'loss'
+}
+
+/** 진행 중·종료 경기의 스코어 표시 (승패 집계와 별개) */
+export const getMatchScoreLine = (match) => {
+  if (!match) return null
+  if (isMatchCancelled(match)) return null
+  if (
+    typeof match.hanwha_score === 'number' &&
+    typeof match.opponent_score === 'number' &&
+    (isMatchDecided(match) || isMatchInProgress(match))
+  ) {
+    return `${match.hanwha_score}:${match.opponent_score}`
+  }
+  return null
 }
 
 /** 승률 내림차순, 동률이면 경기 수·승 수, 그다음 구분명(가나다) */

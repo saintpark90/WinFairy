@@ -1297,6 +1297,11 @@ span.profile-avatar-large.user-avatar-fallback {
   color: #4b5563;
 }
 
+.recent-game-result--in_progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .recent-game-result--cancelled {
   background: #f1f5f9;
   color: #64748b;
@@ -1888,7 +1893,8 @@ td.stat-rank-col {
 .attendance-page .calendar-cell--result-loss .calendar-result-under-emblem--win,
 .attendance-page .calendar-cell--result-loss .calendar-result-under-emblem--loss,
 .attendance-page .calendar-cell--result-loss .calendar-result-under-emblem--draw,
-.attendance-page .calendar-cell--result-loss .calendar-result-under-emblem--pending {
+.attendance-page .calendar-cell--result-loss .calendar-result-under-emblem--pending,
+.attendance-page .calendar-cell--result-loss .calendar-result-under-emblem--in_progress {
   color: #1a0b05;
 }
 
@@ -1900,6 +1906,11 @@ td.stat-rank-col {
 .attendance-page .calendar-cell--result-pending {
   background: #fff;
   border: 1px solid #e5e7eb;
+}
+
+.attendance-page .calendar-cell--result-in_progress {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
 }
 
 .attendance-page .calendar-cell--result-cancelled {
@@ -2066,6 +2077,10 @@ td.stat-rank-col {
 
 .calendar-result-under-emblem--pending {
   color: #475569;
+}
+
+.calendar-result-under-emblem--in_progress {
+  color: #b45309;
 }
 
 .calendar-result-under-emblem--cancelled {
@@ -2235,6 +2250,7 @@ td.stat-rank-col {
 }
 
 .attendance-list-row--pending,
+.attendance-list-row--in_progress,
 .attendance-list-row--none {
   background: #fff;
 }
@@ -2267,6 +2283,11 @@ td.stat-rank-col {
 .attendance-list-result--none {
   background: #f3f4f6;
   color: #4b5563;
+}
+
+.attendance-list-result--in_progress {
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .attendance-list-result--cancelled {
@@ -3338,6 +3359,18 @@ button {
     color: #475569;
   }
 
+  .attendance-page .calendar-result-under-emblem--in_progress {
+    font-size: 0;
+    line-height: 1;
+  }
+
+  .attendance-page .calendar-result-under-emblem--in_progress::after {
+    content: '중';
+    font-size: 0.58rem;
+    font-weight: 800;
+    color: #b45309;
+  }
+
   .attendance-page .calendar-cell-score-row {
     min-height: 0;
     margin-top: 1px;
@@ -3488,6 +3521,18 @@ button {
     font-size: 0.68rem;
     font-weight: 800;
     color: #4b5563;
+  }
+
+  .attendance-page .attendance-list-result--in_progress {
+    font-size: 0;
+    padding: 2px 5px;
+  }
+
+  .attendance-page .attendance-list-result--in_progress::after {
+    content: '중';
+    font-size: 0.68rem;
+    font-weight: 800;
+    color: #b45309;
   }
 
   .attendance-page .attendance-list-table thead th:nth-child(6) {

@@ -47,6 +47,27 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const IN_PROGRESS_RE = /진행|경기\s*중/i;
+
+function isMatchInProgress(match: MatchRow | null | undefined) {
+  if (!match) return false;
+  if (match.game_status && IN_PROGRESS_RE.test(String(match.game_status))) {
+    return true;
+  }
+  const hanwhaScore = match.hanwha_score;
+  const opponentScore = match.opponent_score;
+  if (
+    !String(match.winner_team ?? "").trim() &&
+    typeof hanwhaScore === "number" &&
+    typeof opponentScore === "number" &&
+    hanwhaScore === opponentScore &&
+    hanwhaScore === 0
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function isMatchCancelled(match: MatchRow | null | undefined) {
   if (!match?.game_status) return false;
   return CANCELLED_RE.test(String(match.game_status));
@@ -54,6 +75,7 @@ function isMatchCancelled(match: MatchRow | null | undefined) {
 
 function isMatchDecided(match: MatchRow | null | undefined) {
   if (!match || isMatchCancelled(match)) return false;
+  if (isMatchInProgress(match)) return false;
   const winner = match.winner_team;
   if (winner != null && String(winner).trim() !== "") return true;
   return (

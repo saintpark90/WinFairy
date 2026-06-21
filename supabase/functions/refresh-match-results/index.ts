@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 /** scripts/fetch_kbo_2026.py 와 동일한 Schedule.aspx 파싱 규칙 */
 const PLAY_DECIDED_RE =
-  /<span>([^<]+)<\/span><em><span class="(?:lose|win)">(\d+)<\/span><span>vs<\/span><span class="(?:lose|win)">(\d+)<\/span><\/em><span>([^<]+)<\/span>/;
+  /<span>([^<]+)<\/span><em><span class="(?:lose|win|same)">(\d+)<\/span><span>vs<\/span><span class="(?:lose|win|same)">(\d+)<\/span><\/em><span>([^<]+)<\/span>/;
 const TIME_CELL_RE = /<b>([^<]+)<\/b>/;
 const HANWHA_KEYWORDS = ["한화", "Eagles", "Hanwha"];
 
@@ -20,6 +20,13 @@ function stripTags(html: string): string {
 function includesHanwha(label: string): boolean {
   const s = stripTags(label);
   return HANWHA_KEYWORDS.some((k) => s.includes(k));
+}
+
+/** KBO 일정: 종료 경기만 GameCenter REVIEW 링크가 붙습니다. */
+function scheduleGameFinished(cells: unknown[]): boolean {
+  if (cells.length < 4) return false;
+  const text = String((cells[3] as { Text?: string })?.Text ?? "");
+  return text.includes("section=REVIEW");
 }
 
 type ParsedGame = {
@@ -62,7 +69,11 @@ function parseScheduleRow(block: { row?: unknown[] }, year: number): ParsedGame 
   const gameStartTime = tm ? stripTags(tm[1]) : null;
 
   const note = stripTags(String((cells[8] as { Text?: string })?.Text ?? ""));
-  const gameStatus = note && note !== "-" ? note : null;
+  const finished = scheduleGameFinished(cells);
+  let gameStatus = note && note !== "-" ? note : null;
+  if (!finished) {
+    gameStatus = gameStatus ?? "진행중";
+  }
 
   return {
     gameDate,
@@ -167,7 +178,7 @@ async function updateMatchFromParsed(
     source: "KBO",
   };
   if (parsed.gameStartTime) update.game_start_time = parsed.gameStartTime;
-  if (parsed.gameStatus) update.game_status = parsed.gameStatus;
+  update.game_status = parsed.gameStatus;
 
   const { error } = await supabase.from("matches").update(update).eq("id", match.id);
   return !error;

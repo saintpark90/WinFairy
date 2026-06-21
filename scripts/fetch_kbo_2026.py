@@ -29,8 +29,8 @@ TEAM_ID_TO_NAME = {
 
 # Schedule.aspx 리스트 셀: `<span>원정</span><em>…점수…</em><span>홈</span>`
 PLAY_DECIDED_RE = re.compile(
-  r'<span>([^<]+)</span><em><span class="(?:lose|win)">(\d+)</span><span>vs</span>'
-  r'<span class="(?:lose|win)">(\d+)</span></em><span>([^<]+)</span>',
+  r'<span>([^<]+)</span><em><span class="(?:lose|win|same)">(\d+)</span><span>vs</span>'
+  r'<span class="(?:lose|win|same)">(\d+)</span></em><span>([^<]+)</span>',
 )
 PLAY_PENDING_RE = re.compile(r'<span>([^<]+)</span><em><span>vs</span></em><span>([^<]+)</span>')
 GAME_LINK_RE = re.compile(r"gameDate=(\d{8})&gameId=([^&'\"]+)")
@@ -123,6 +123,14 @@ def _parse_game_id_teams(game_id: str) -> Tuple[str, str] | None:
   return m.group(2).upper(), m.group(3).upper()
 
 
+def _schedule_game_finished(cells: List[Dict[str, Any]]) -> bool:
+  """종료 경기만 GameCenter REVIEW 링크가 붙습니다 (진행 중·예정 경기는 없음)."""
+  if len(cells) < 4:
+    return False
+  text = cells[3].get("Text") or ""
+  return "section=REVIEW" in text
+
+
 def _schedule_list_row_to_game_row(
   cells: List[Dict[str, Any]], year: int
 ) -> Tuple[Dict[str, Any], str] | None:
@@ -182,6 +190,11 @@ def _schedule_list_row_to_game_row(
 
   away_nm = TEAM_ID_TO_NAME.get(away_id, away_id)
   home_nm = TEAM_ID_TO_NAME.get(home_id, home_id)
+
+  has_scores = dm is not None
+  finished = _schedule_game_finished(cells)
+  if has_scores and not finished and not game_sc:
+    game_sc = "진행중"
 
   return (
     {

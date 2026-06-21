@@ -4,7 +4,7 @@ import { refreshLeaderboardCache } from '../lib/refreshLeaderboard'
 import { formatStadiumShort } from '../lib/stadiumShort'
 import { getOpponentTeamLogoUrl } from '../lib/teamLogos'
 import { getKoreanDayMark, isKoreanNonRedDayMark, isKoreanPublicHolidayMark } from '../lib/koreanHolidays'
-import { getMatchResultKind, isMatchCancelled, isMatchDecided } from '../lib/stats'
+import { getMatchResultKind, isMatchCancelled, isMatchDecided, getMatchScoreLine } from '../lib/stats'
 import { canAccessMemberAdmin } from '../lib/admin'
 import AttendanceViewersModal from '../components/AttendanceViewersModal'
 import CalendarContextMenu from '../components/CalendarContextMenu'
@@ -52,25 +52,17 @@ const resultLabelShort = (match) => {
   const kind = getMatchResultKind(match)
   if (kind === 'none') return ''
   if (kind === 'cancelled') return '취소'
+  if (kind === 'in_progress') return '경기 중'
   if (kind === 'pending') return '경기 전'
   if (kind === 'draw') return '무'
   if (kind === 'win') return '승'
   return '패'
 }
 
-const scoreLineForCell = (match) => {
-  if (!match || !isMatchDecided(match)) return null
-  if (
-    typeof match.hanwha_score === 'number' &&
-    typeof match.opponent_score === 'number'
-  ) {
-    return `${match.hanwha_score}:${match.opponent_score}`
-  }
-  return '—'
-}
+const scoreLineForCell = (match) => getMatchScoreLine(match)
 
 const pendingStartTimeText = (match) => {
-  if (!match || isMatchDecided(match) || isMatchCancelled(match)) return null
+  if (!match || isMatchDecided(match) || isMatchCancelled(match) || getMatchResultKind(match) === 'in_progress') return null
   const t = match.game_start_time
   if (typeof t === 'string' && t.trim()) return t.trim()
   return null
