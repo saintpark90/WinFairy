@@ -6,15 +6,15 @@
 
 from __future__ import annotations
 
-import json
+import argparse
 import os
 import subprocess
 import sys
 
-from fetch_kbo_2026 import _load_local_env, require_env
+from fetch_kbo_2026 import _load_local_env
 
 PROJECT_REF = "pxienajdgtrzbfdiwbsh"
-FUNCTION_NAME = "sync-leaderboard"
+DEFAULT_FUNCTION_NAMES = ("sync-leaderboard", "refresh-match-results")
 
 
 def _read_access_token() -> str:
@@ -34,7 +34,19 @@ def _read_access_token() -> str:
   return ""
 
 
-def main() -> None:
+def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+  parser = argparse.ArgumentParser(description="Deploy Supabase Edge Functions.")
+  parser.add_argument(
+    "functions",
+    nargs="*",
+    choices=DEFAULT_FUNCTION_NAMES,
+    help="배포할 함수명. 생략하면 모든 Edge Function을 배포합니다.",
+  )
+  return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> None:
+  args = _parse_args(argv)
   token = _read_access_token()
   if not token:
     print(
@@ -44,30 +56,31 @@ def main() -> None:
     )
     sys.exit(1)
 
-  require_env("SUPABASE_URL")
+  function_names = args.functions or list(DEFAULT_FUNCTION_NAMES)
   root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
   env = {**os.environ, "SUPABASE_ACCESS_TOKEN": token}
 
-  result = subprocess.run(
-    [
-      "npx",
-      "--yes",
-      "supabase",
-      "functions",
-      "deploy",
-      FUNCTION_NAME,
-      "--project-ref",
-      PROJECT_REF,
-      "--use-api",
-    ],
-    cwd=root,
-    env=env,
-    check=False,
-  )
-  if result.returncode != 0:
-    sys.exit(result.returncode)
+  for function_name in function_names:
+    result = subprocess.run(
+      [
+        "npx",
+        "--yes",
+        "supabase",
+        "functions",
+        "deploy",
+        function_name,
+        "--project-ref",
+        PROJECT_REF,
+        "--use-api",
+      ],
+      cwd=root,
+      env=env,
+      check=False,
+    )
+    if result.returncode != 0:
+      sys.exit(result.returncode)
 
-  print(f"Deployed: {FUNCTION_NAME} -> project {PROJECT_REF}")
+    print(f"Deployed: {function_name} -> project {PROJECT_REF}")
 
 
 if __name__ == "__main__":
