@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 /** scripts/fetch_kbo_2026.py 와 동일한 Schedule.aspx 파싱 규칙 */
 const PLAY_DECIDED_RE =
-  /<span>([^<]+)<\/span><em><span class="(?:lose|win)">(\d+)<\/span><span>vs<\/span><span class="(?:lose|win)">(\d+)<\/span><\/em><span>([^<]+)<\/span>/;
+  /<span>([^<]+)<\/span><em><span\b[^>]*>(\d+)<\/span><span>vs<\/span><span\b[^>]*>(\d+)<\/span><\/em><span>([^<]+)<\/span>/;
 const TIME_CELL_RE = /<b>([^<]+)<\/b>/;
 const HANWHA_KEYWORDS = ["한화", "Eagles", "Hanwha"];
 

@@ -29,8 +29,8 @@ TEAM_ID_TO_NAME = {
 
 # Schedule.aspx 리스트 셀: `<span>원정</span><em>…점수…</em><span>홈</span>`
 PLAY_DECIDED_RE = re.compile(
-  r'<span>([^<]+)</span><em><span class="(?:lose|win)">(\d+)</span><span>vs</span>'
-  r'<span class="(?:lose|win)">(\d+)</span></em><span>([^<]+)</span>',
+  r'<span>([^<]+)</span><em><span\b[^>]*>(\d+)</span><span>vs</span>'
+  r'<span\b[^>]*>(\d+)</span></em><span>([^<]+)</span>',
 )
 PLAY_PENDING_RE = re.compile(r'<span>([^<]+)</span><em><span>vs</span></em><span>([^<]+)</span>')
 GAME_LINK_RE = re.compile(r"gameDate=(\d{8})&gameId=([^&'\"]+)")
