@@ -11,7 +11,10 @@ import os
 import subprocess
 import sys
 
-from fetch_kbo_2026 import _load_local_env
+try:
+  from fetch_kbo_2026 import _load_local_env
+except ImportError:
+  from .fetch_kbo_2026 import _load_local_env
 
 PROJECT_REF = "pxienajdgtrzbfdiwbsh"
 DEFAULT_FUNCTION_NAMES = ("sync-leaderboard", "refresh-match-results")
